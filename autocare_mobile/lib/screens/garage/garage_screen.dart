@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/vehicle_service.dart';
+import '../booking/repair_type_screen.dart';
 
 class GarageScreen extends StatefulWidget {
   const GarageScreen({super.key});
@@ -136,6 +137,16 @@ class _GarageScreenState extends State<GarageScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            IconButton(
+              icon: const Icon(Icons.calendar_month),
+              tooltip: 'Đặt lịch sửa chữa',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => RepairTypeScreen(vehicle: vehicle)),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () async {
