@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../constants/api_constants.dart';
 import '../storage/token_storage.dart';
 
 class AdminMechanicService {
-  static const String baseUrl = 'http://localhost:8080/api/admin/mechanics';
+  static String get baseUrl => '${ApiConstants.baseUrl}/api/admin/mechanics';
 
   Future<String> _getToken() async {
     final token = await TokenStorage.getToken();
