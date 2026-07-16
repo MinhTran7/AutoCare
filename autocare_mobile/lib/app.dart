@@ -24,6 +24,11 @@ import 'screens/admin/mechanic_detail_screen.dart';
 import 'screens/admin/edit_mechanic_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 
+import 'screens/tracking/booking_tracking_screen.dart';
+import 'screens/tracking/invoice_screen.dart';
+import 'screens/tracking/notification_screen.dart';
+import 'screens/tracking/review_screen.dart';
+
 class AutoCareApp extends StatelessWidget {
   const AutoCareApp({super.key});
 
@@ -59,6 +64,28 @@ class AutoCareApp extends StatelessWidget {
         '/mechanic-detail': (context) => const MechanicDetailScreen(),
         '/edit-mechanic': (context) => const EditMechanicScreen(),
         '/verify-email': (context) => const VerifyEmailScreen(),
+
+        '/booking-tracking': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+          as Map<String, dynamic>;
+          return BookingTrackingScreen(bookingId: args['bookingId']);
+        },
+
+        '/invoice': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+          as Map<String, dynamic>;
+          return InvoiceScreen(bookingId: args['bookingId']);
+        },
+
+        '/review': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+          as Map<String, dynamic>;
+          return ReviewScreen(
+            bookingId: args['bookingId'],
+            garageId: args['garageId'],
+            garageName: args['garageName'],
+          );
+        },
       },
     );
   }

@@ -7,32 +7,41 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "mechanics")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Mechanic {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "user_id", nullable = false, unique = true)
-    private Integer userId;
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "garage_id")
-    private Garage garage;
+    // Mapping đến entity Garage (nếu bạn đã tạo)
+    @Column(name = "garage_id")
+    private Integer garageId;
 
+    @Column(length = 100)
     private String specialty;
 
     @Enumerated(EnumType.STRING)
-    private MechanicStatus status;
+    @Column(nullable = false)
+    private MechanicStatus status = MechanicStatus.AVAILABLE;
 
+    @Column(precision = 2, scale = 1)
     private BigDecimal rating;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+}
 
-    public enum MechanicStatus { AVAILABLE, BUSY, OFF }
+enum MechanicStatus {
+    AVAILABLE, BUSY, OFF
 }
