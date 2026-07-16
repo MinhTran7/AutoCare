@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/admin_mechanic_service.dart';
 
 class ManageMechanicsScreen extends StatefulWidget {
-  final bool embedded;
-
-  const ManageMechanicsScreen({super.key, this.embedded = false});
+  const ManageMechanicsScreen({super.key});
 
   @override
   State<ManageMechanicsScreen> createState() => _ManageMechanicsScreenState();
@@ -445,17 +443,15 @@ class _ManageMechanicsScreenState extends State<ManageMechanicsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xfff5f7fb),
-      appBar: widget.embedded
-          ? null
-          : AppBar(
-              title: const Text('Danh sách thợ'),
-              actions: [
-                IconButton(
-                  onPressed: _loadMechanics,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        title: const Text('Danh sách thợ'),
+        actions: [
+          IconButton(
+            onPressed: _loadMechanics,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreateMechanicScreen,
         icon: const Icon(Icons.person_add),
@@ -463,27 +459,6 @@ class _ManageMechanicsScreenState extends State<ManageMechanicsScreen> {
       ),
       body: Column(
         children: [
-          if (widget.embedded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Danh sách thợ',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _loadMechanics,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: TextField(

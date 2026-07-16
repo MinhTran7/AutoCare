@@ -30,7 +30,7 @@ class ApiConstants {
     return "http://localhost:8080";
   }
 
-  static String get loginEndpoint => "$baseUrl/api/auth/login";
-  static String get registerEndpoint => "$baseUrl/api/auth/register";
-  static String get meEndpoint => "$baseUrl/api/users/me";
+  static String get loginEndpoint => "$baseUrl/auth/login";
+  static String get registerEndpoint => "$baseUrl/auth/register";
+  static String get meEndpoint => "$baseUrl/users/me";
 }
