@@ -2,8 +2,8 @@ package com.autocare.api.service;
 
 import com.autocare.api.dto.admin.ServiceItemRequest;
 import com.autocare.api.dto.admin.ServiceItemResponse;
-import com.autocare.api.entity.ServiceItem;
-import com.autocare.api.repository.ServiceItemRepository;
+import com.autocare.api.entity.RepairService;
+import com.autocare.api.repository.RepairServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminServiceCatalogService {
 
-    private final ServiceItemRepository serviceItemRepository;
+    private final RepairServiceRepository repairServiceRepository;
 
     public List<ServiceItemResponse> getAll() {
-        return serviceItemRepository.findAllByOrderByCreatedAtDesc()
+        return repairServiceRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(ServiceItemResponse::new)
                 .collect(Collectors.toList());
@@ -33,21 +33,21 @@ public class AdminServiceCatalogService {
     public ServiceItemResponse create(ServiceItemRequest request) {
         validate(request, true);
 
-        ServiceItem item = ServiceItem.builder()
+        RepairService item = RepairService.builder()
                 .name(request.getName().trim())
                 .description(normalize(request.getDescription()))
                 .price(request.getPrice())
                 .isHomeService(Boolean.TRUE.equals(request.getIsHomeService()))
-                .status(normalizeStatus(request.getStatus()))
+                .status(parseStatus(request.getStatus()))
                 .build();
 
-        return new ServiceItemResponse(serviceItemRepository.save(item));
+        return new ServiceItemResponse(repairServiceRepository.save(item));
     }
 
     public ServiceItemResponse update(Integer id, ServiceItemRequest request) {
         validate(request, false);
 
-        ServiceItem item = getEntity(id);
+        RepairService item = getEntity(id);
         item.setName(request.getName().trim());
         item.setDescription(normalize(request.getDescription()));
         item.setPrice(request.getPrice());
@@ -55,20 +55,20 @@ public class AdminServiceCatalogService {
             item.setIsHomeService(request.getIsHomeService());
         }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            item.setStatus(normalizeStatus(request.getStatus()));
+            item.setStatus(parseStatus(request.getStatus()));
         }
 
-        return new ServiceItemResponse(serviceItemRepository.save(item));
+        return new ServiceItemResponse(repairServiceRepository.save(item));
     }
 
     public ServiceItemResponse setStatus(Integer id, String status) {
-        ServiceItem item = getEntity(id);
-        item.setStatus(normalizeStatus(status));
-        return new ServiceItemResponse(serviceItemRepository.save(item));
+        RepairService item = getEntity(id);
+        item.setStatus(parseStatus(status));
+        return new ServiceItemResponse(repairServiceRepository.save(item));
     }
 
-    private ServiceItem getEntity(Integer id) {
-        return serviceItemRepository.findById(id)
+    private RepairService getEntity(Integer id) {
+        return repairServiceRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Không tìm thấy dịch vụ"
@@ -97,14 +97,15 @@ public class AdminServiceCatalogService {
         return value.trim();
     }
 
-    private String normalizeStatus(String status) {
+    private RepairService.ServiceStatus parseStatus(String status) {
         if (status == null || status.isBlank()) {
-            return "ACTIVE";
+            return RepairService.ServiceStatus.ACTIVE;
         }
         String normalized = status.trim().toUpperCase();
-        if (!normalized.equals("ACTIVE") && !normalized.equals("INACTIVE")) {
+        try {
+            return RepairService.ServiceStatus.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status phải là ACTIVE hoặc INACTIVE");
         }
-        return normalized;
     }
 }

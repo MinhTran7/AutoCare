@@ -1,6 +1,6 @@
 package com.autocare.api.dto.admin;
 
-import com.autocare.api.entity.ServiceItem;
+import com.autocare.api.entity.RepairService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,13 +18,13 @@ public class ServiceItemResponse {
     public ServiceItemResponse() {
     }
 
-    public ServiceItemResponse(ServiceItem item) {
+    public ServiceItemResponse(RepairService item) {
         this.id = item.getId();
         this.name = item.getName();
         this.description = item.getDescription();
         this.price = item.getPrice();
         this.isHomeService = item.getIsHomeService();
-        this.status = item.getStatus();
+        this.status = item.getStatus() != null ? item.getStatus().name() : null;
         this.createdAt = item.getCreatedAt();
         this.updatedAt = item.getUpdatedAt();
     }
