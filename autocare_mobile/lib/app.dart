@@ -86,6 +86,7 @@ class AutoCareApp extends StatelessWidget {
             bookingId: args['bookingId'],
             garageId: args['garageId'],
             garageName: args['garageName'],
+            status: args['status'], // <--- THÊM DÒNG NÀY VÀO ĐỂ TRUYỀN STATUS
           );
         },
       },

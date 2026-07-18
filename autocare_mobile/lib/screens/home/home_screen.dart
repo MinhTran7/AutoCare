@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../storage/token_storage.dart';
+import '../../services/notification_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,12 +13,99 @@ class HomeScreen extends StatelessWidget {
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
+  // Hàm gọi API lấy danh sách lịch hẹn của User
+  Future<List<Map<String, dynamic>>> _fetchMyBookings() async {
+    final token = await TokenStorage.getToken();
+    if (token == null) throw Exception('Chưa đăng nhập');
+
+    final response = await http.get(
+      Uri.parse('http://localhost:8080/api/bookings/my-bookings'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return List<Map<String, dynamic>>.from(data);
+    }
+    throw Exception('Lỗi server: ${response.statusCode}');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AutoCare Home'),
         actions: [
+          // Thay thế nút thông báo tĩnh bằng bộ gọi API động này:
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () async {
+              // 1. Gọi service lấy thông báo động từ DB lên
+              final notificationService = NotificationService();
+              final dynamicNotifications = await notificationService.getAll();
+
+              if (!context.mounted) return;
+
+              // 2. Hiển thị Popup
+              showDialog(
+                context: context,
+                builder: (ctx) => Dialog(
+                  alignment: Alignment.topRight,
+                  insetPadding: const EdgeInsets.only(top: 56, right: 16, left: 80),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Container(
+                    width: 320,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Thông báo của bạn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Divider(),
+                        dynamicNotifications.isEmpty
+                            ? const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text('Không có thông báo nào', style: TextStyle(color: Colors.grey)),
+                        )
+                            : SizedBox(
+                          height: 250,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: dynamicNotifications.length,
+                            itemBuilder: (context, index) {
+                              final n = dynamicNotifications[index];
+                              return ListTile(
+                                leading: Icon(
+                                  n['type'] == 'invoice_ready' ? Icons.receipt_long : Icons.notifications,
+                                  color: Colors.blue,
+                                ),
+                                title: Text(n['title'] ?? 'Thông báo'),
+                                subtitle: Text(n['body'] ?? ''),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  final bId = n['bookingId'];
+                                  if (bId == null) return;
+
+                                  // Tự động điều hướng động theo loại thông báo trong DB
+                                  if (n['type'] == 'invoice_ready') {
+                                    Navigator.pushNamed(context, '/invoice', arguments: {'bookingId': bId});
+                                  } else {
+                                    Navigator.pushNamed(context, '/booking-tracking', arguments: {'bookingId': bId});
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             onPressed: () => Navigator.pushNamed(context, '/profile'),
             icon: const Icon(Icons.person),
@@ -36,10 +126,9 @@ class HomeScreen extends StatelessWidget {
                 'Trang Home',
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 24),
 
-              // TV1
+              // TV1 giữ nguyên
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -49,7 +138,6 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -61,68 +149,120 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
               const Divider(),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'TV3 — Test',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.assignment, color: Colors.blue.shade700),
+                    const SizedBox(width: 8),
+                    const Text('Lịch hẹn của bạn (TV3)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ),
 
-              // TV3
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/booking-tracking',
-                    arguments: {'bookingId': 1},
-                  ),
-                  icon: const Icon(Icons.timeline),
-                  label: const Text('Theo dõi lịch hẹn (Booking #1)'),
-                ),
-              ),
-              const SizedBox(height: 12),
+              // Gọi bộ dựng tự động dựa vào trạng thái API
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchMyBookings(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ));
+                  }
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/invoice',
-                    arguments: {'bookingId': 1},
-                  ),
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('Hoá đơn (Booking #1)'),
-                ),
-              ),
-              const SizedBox(height: 12),
+                  if (snapshot.hasError) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      color: Colors.red.shade50,
+                      child: const Text(
+                        'Không thể tải lịch hẹn. Vui lòng kiểm tra kết nối Backend hoặc đăng nhập lại.',
+                        style: TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushNamed(context, '/notifications'),
-                  icon: const Icon(Icons.notifications),
-                  label: const Text('Thông báo'),
-                ),
-              ),
-              const SizedBox(height: 12),
+                  final bookings = snapshot.data ?? [];
+                  if (bookings.isEmpty) {
+                    return const Text('Bạn chưa có lịch đặt sửa xe nào.', style: TextStyle(color: Colors.grey));
+                  }
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/review',
-                    arguments: {
-                      'bookingId': 3,
-                      'garageId': 3,
-                      'garageName': 'Garage AutoCare',
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: bookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = bookings[index];
+                      final bId = booking['id'];
+                      final status = booking['status'] ?? 'PENDING';
+                      final serviceName = booking['serviceName'] ?? 'Dịch vụ';
+                      final garageName = booking['garageName'] ?? 'Garage AutoCare';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Mã đơn: #$bId', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Dịch vụ: $serviceName tại $garageName'),
+                              Text('Trạng thái: $status', style: const TextStyle(color: Colors.blue)),
+                              const Divider(),
+                              Row(
+                                children: [
+                                  // 1. Nút Tiến trình (Luôn hiện)
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.pushNamed(context, '/booking-tracking', arguments: {'bookingId': bId}),
+                                      child: const Text('Tiến trình'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // 2. Nút Hoá đơn (Luôn hiện)
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.pushNamed(context, '/invoice', arguments: {'bookingId': bId}),
+                                      child: const Text('Hoá đơn'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8), // Khoảng cách giữa 2 hàng nút
+                              Row(
+                                children: [
+                                  // Nút Xem review & Đánh giá chung (LUÔN HIỆN)
+                                  // Thay thế đoạn Expanded hiện tại trong HomeScreen của bạn bằng:
+                                  // Tìm đến đoạn nút Đánh giá trong HomeScreen.dart và sửa lại:
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      icon: const Icon(Icons.rate_review, size: 16),
+                                      label: const Text('Đánh giá'),
+                                      onPressed: () {
+                                        // Sửa '/review-page' thành '/review'
+                                        Navigator.pushNamed(context, '/review', arguments: {
+                                          'bookingId': bId,
+                                          'serviceId': booking['serviceId'],
+                                          'garageId': booking['garageId'] ?? 1,
+                                          'garageName': garageName, // Đảm bảo truyền đủ tham số này
+                                          'status': status,
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
                     },
-                  ),
-                  icon: const Icon(Icons.star),
-                  label: const Text('Đánh giá (Booking #3)'),
-                ),
+                  );
+                },
               ),
             ],
           ),

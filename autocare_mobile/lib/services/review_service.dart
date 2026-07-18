@@ -1,110 +1,83 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../storage/token_storage.dart';
+import '../../storage/token_storage.dart';
 
 class ReviewService {
-  final String baseUrl = 'http://localhost:8080/api/reviews';
+  final String baseUrl = 'http://localhost:8080/api';
 
-  Future<List<Map<String, dynamic>>> getGarageReviews(int garageId) async {
+  Future<List<Map<String, dynamic>>> getAllServices() async {
     final token = await TokenStorage.getToken();
-    if (token == null) throw Exception('Bạn chưa đăng nhập');
-
     final response = await http.get(
-      Uri.parse('$baseUrl/garage/$garageId'),
+      Uri.parse('$baseUrl/services'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    throw Exception('Không thể tải dịch vụ (status: ${response.statusCode})');
+  }
 
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200) return List<Map<String, dynamic>>.from(data);
-    throw Exception(data['message'] ?? 'Không thể tải đánh giá');
+  // Lấy danh sách review của 1 garage, kèm serviceId/serviceName để lọc
+  Future<List<Map<String, dynamic>>> getReviewsByGarage(int garageId) async {
+    final token = await TokenStorage.getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/reviews/garage/$garageId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    throw Exception('Không thể tải danh sách đánh giá (status: ${response.statusCode})');
   }
 
   Future<Map<String, dynamic>?> getByBookingId(int bookingId) async {
     final token = await TokenStorage.getToken();
-    if (token == null) throw Exception('Bạn chưa đăng nhập');
-
     final response = await http.get(
-      Uri.parse('$baseUrl/booking/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      Uri.parse('$baseUrl/reviews/booking/$bookingId'),
+      headers: {'Authorization': 'Bearer $token'},
     );
-
     if (response.statusCode == 200) return jsonDecode(utf8.decode(response.bodyBytes));
     return null;
   }
 
-  Future<Map<String, dynamic>> createReview({
-    required int bookingId,
-    required int garageId,
-    required int rating,
-    String? comment,
-    String? images,
-  }) async {
+  // FIX: đổi path thành /reviews/booking/{bookingId} (khớp ReviewController thật),
+  // và bookingId nằm trên URL path, không nằm trong body nữa.
+  Future<Map<String, dynamic>> createReview({required int bookingId, required int garageId, required int rating, required String comment}) async {
     final token = await TokenStorage.getToken();
-    if (token == null) throw Exception('Bạn chưa đăng nhập');
-
     final response = await http.post(
-      Uri.parse('$baseUrl/booking/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'garageId': garageId,
-        'rating': rating,
-        'comment': comment,
-        'images': images,
-      }),
+      Uri.parse('$baseUrl/reviews/booking/$bookingId'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'garageId': garageId, 'rating': rating, 'comment': comment}),
     );
-
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200) return data;
-    throw Exception(data['message'] ?? 'Gửi đánh giá thất bại');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Tạo đánh giá thất bại (status: ${response.statusCode})');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
-  Future<Map<String, dynamic>> updateReview({
-    required int bookingId,
-    required int rating,
-    String? comment,
-    String? images,
-  }) async {
+  Future<Map<String, dynamic>> updateReview({required int bookingId, required int rating, required String comment}) async {
     final token = await TokenStorage.getToken();
-    if (token == null) throw Exception('Bạn chưa đăng nhập');
-
     final response = await http.put(
-      Uri.parse('$baseUrl/booking/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'rating': rating, 'comment': comment, 'images': images}),
+      Uri.parse('$baseUrl/reviews/booking/$bookingId'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'rating': rating, 'comment': comment}),
     );
-
-    final data = jsonDecode(utf8.decode(response.bodyBytes));
-    if (response.statusCode == 200) return data;
-    throw Exception(data['message'] ?? 'Cập nhật đánh giá thất bại');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Cập nhật đánh giá thất bại (status: ${response.statusCode})');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes));
   }
 
   Future<void> deleteReview(int bookingId) async {
     final token = await TokenStorage.getToken();
-    if (token == null) throw Exception('Bạn chưa đăng nhập');
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/booking/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode != 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      throw Exception(data['message'] ?? 'Xoá đánh giá thất bại');
-    }
+    await http.delete(Uri.parse('$baseUrl/reviews/booking/$bookingId'), headers: {'Authorization': 'Bearer $token'});
   }
 }

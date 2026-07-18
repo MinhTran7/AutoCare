@@ -25,27 +25,24 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // ── Quan hệ với User (người nhận) ────────────────────────────────────────
-    // TODO: Bật khi muốn load thông tin người nhận
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "user_id", nullable = false)
-    // private User user;
+    // ── Quan hệ với User ─────────────────────────────────────────────────────
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    public Integer getUserId() {
+        return user != null ? user.getId() : null;
+    }
 
-    // ── Quan hệ với Booking ──────────────────────────────────────────────────
-    // Nullable — thông báo promo không cần booking
-    // TODO: Bật khi TV2 đã có Booking entity
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "booking_id")
-    // private Booking booking;
+    // ── Quan hệ với Booking (TV2 đã có Booking entity) ───────────────────────
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
 
-    @Column(name = "booking_id")
-    private Integer bookingId;
+    public Integer getBookingId() {
+        return booking != null ? booking.getId() : null;
+    }
 
-    // ── Nội dung ─────────────────────────────────────────────────────────────
-    // booking_confirmed | status_update | invoice_ready | review_reminder | promo
     @Column(nullable = false, length = 50)
     private String type;
 
@@ -55,7 +52,6 @@ public class Notification {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    // false = chưa đọc → hiện badge đỏ trên app
     @Builder.Default
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;

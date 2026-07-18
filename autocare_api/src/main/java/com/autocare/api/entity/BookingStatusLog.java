@@ -24,34 +24,30 @@ public class BookingStatusLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // ── Quan hệ với Booking ──────────────────────────────────────────────────
-    // TODO: Bật khi TV2 đã có Booking entity
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "booking_id", nullable = false)
-    // private Booking booking;
+    // ── Quan hệ với Booking (TV2 đã có Booking entity) ───────────────────────
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
-    @Column(name = "booking_id", nullable = false)
-    private Integer bookingId;
+    public Integer getBookingId() {
+        return booking != null ? booking.getId() : null;
+    }
 
-    // ── Quan hệ với User (người thay đổi trạng thái) ────────────────────────
-    // TODO: Bật khi muốn load thông tin người thay đổi
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "changed_by")
-    // private User changedBy;
+    // ── Quan hệ với User ─────────────────────────────────────────────────────
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "changed_by")
+    private User changedBy;
 
-    @Column(name = "changed_by")
-    private Integer changedBy;
+    public Integer getChangedById() {
+        return changedBy != null ? changedBy.getId() : null;
+    }
 
-    // ── Trạng thái ──────────────────────────────────────────────────────────
-    // null nếu là bước đầu tiên (PENDING)
     @Column(name = "old_status", length = 30)
     private String oldStatus;
 
-    // PENDING | CONFIRMED | IN_PROGRESS | COMPLETED | CANCELLED
     @Column(name = "new_status", nullable = false, length = 30)
     private String newStatus;
 
-    // Ghi chú cho bước này, vd: "Thợ đã đến nơi, bắt đầu kiểm tra"
     @Column(columnDefinition = "TEXT")
     private String note;
 
