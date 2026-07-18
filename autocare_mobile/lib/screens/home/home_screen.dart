@@ -2,16 +2,65 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../storage/token_storage.dart';
-import '../../services/notification_service.dart';
+import '../../services/vehicle_service.dart';
+import '../booking/repair_type_screen.dart';
+import '../booking/select_vehicle_for_booking_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final VehicleService _vehicleService = VehicleService();
+  bool _checkingVehicles = false;
 
   Future<void> _logout(BuildContext context) async {
     await TokenStorage.clearAuthData();
     if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
+  
+  /// Bam nut "Dat lich sua chua xe":
+  /// - Chua co xe nao -> bao them xe truoc.
+  /// - Co dung 1 xe -> vao thang man hinh chon hinh thuc sua chua.
+  /// - Co tu 2 xe tro len -> qua man hinh chon xe truoc.
+  Future<void> _goToBooking(BuildContext context) async {
+    setState(() => _checkingVehicles = true);
+    try {
+      final vehicles = await _vehicleService.getMyVehicles();
+
+      if (!mounted) return;
+      setState(() => _checkingVehicles = false);
+
+      if (vehicles.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bạn chưa có xe nào, vui lòng thêm xe trước khi đặt lịch')),
+        );
+        return;
+      }
+
+      if (vehicles.length == 1) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => RepairTypeScreen(vehicle: vehicles.first)),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SelectVehicleForBookingScreen(vehicles: vehicles)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _checkingVehicles = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
 
   // Hàm gọi API lấy danh sách lịch hẹn của User
   Future<List<Map<String, dynamic>>> _fetchMyBookings() async {
@@ -144,6 +193,22 @@ class HomeScreen extends StatelessWidget {
                   onPressed: () => Navigator.pushNamed(context, '/garage'),
                   icon: const Icon(Icons.directions_car),
                   label: const Text('Garage xe của tôi'),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _checkingVehicles ? null : () => _goToBooking(context),
+                  icon: _checkingVehicles
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                      : const Icon(Icons.calendar_month),
+                  label: const Text('Đặt lịch sửa chữa xe'),
                 ),
               ),
 

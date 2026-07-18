@@ -22,9 +22,6 @@ public class Booking {
     @JoinColumn(name = "garage_id", nullable = false)
     private Garage garage;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_id", nullable = false)
-    private RepairService service;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id", nullable = false)
