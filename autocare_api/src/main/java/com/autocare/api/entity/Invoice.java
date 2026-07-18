@@ -21,8 +21,9 @@ public class Invoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "booking_id", nullable = false, unique = true)
-    private Integer bookingId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
 
     @Column(name = "invoice_code", length = 30, unique = true)
     private String invoiceCode;
