@@ -64,6 +64,9 @@ public class InvoiceService {
         BigDecimal safeTaxAmount = taxAmount != null ? taxAmount : BigDecimal.ZERO;
         BigDecimal totalAmount   = safeSubtotal.subtract(safeDiscount).add(safeTaxAmount);
 
+        Booking bookingRef = new Booking();
+        bookingRef.setId(bookingId);
+
         Invoice invoice = Invoice.builder()
                 .booking(booking)
                 .subtotal(safeSubtotal)

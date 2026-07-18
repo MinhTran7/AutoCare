@@ -27,7 +27,7 @@ public class InvoiceResponse {
 
     public InvoiceResponse(Invoice invoice) {
         this.id            = invoice.getId();
-        this.bookingId     = invoice.getBookingId();
+        this.bookingId     = (invoice.getBooking() != null) ? invoice.getBooking().getId() : null;
         this.invoiceCode   = invoice.getInvoiceCode();
         this.subtotal      = invoice.getSubtotal();
         this.discount      = invoice.getDiscount();
