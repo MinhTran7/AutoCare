@@ -40,8 +40,9 @@ public class Mechanic {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
-}
-
-enum MechanicStatus {
+    
+    public enum MechanicStatus {
     AVAILABLE, BUSY, OFF
 }
+}
+
