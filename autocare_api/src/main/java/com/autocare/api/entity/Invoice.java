@@ -21,6 +21,7 @@ public class Invoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+<<<<<<< Updated upstream
     // ── Quan hệ với Booking ──────────────────────────────────────────────────
     // TODO: Bật khi TV2 đã có Booking entity
     // @OneToOne(fetch = FetchType.LAZY)
@@ -29,6 +30,11 @@ public class Invoice {
 
     @Column(name = "booking_id", nullable = false, unique = true)
     private Integer bookingId;
+=======
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false)
+    private Booking booking;
+>>>>>>> Stashed changes
 
     // ── Mã hoá đơn ──────────────────────────────────────────────────────────
     // Sinh tự động dạng INV-YYYYMMDD-{id} trong @PrePersist + Service

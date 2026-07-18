@@ -2,6 +2,7 @@ package com.autocare.api.service;
 
 import com.autocare.api.entity.Invoice;
 import com.autocare.api.entity.User;
+import com.autocare.api.entity.Booking;
 import com.autocare.api.repository.InvoiceRepository;
 import com.autocare.api.repository.UserRepository;
 import org.springframework.security.core.Authentication;
@@ -56,8 +57,11 @@ public class InvoiceService {
         BigDecimal safeTaxAmount = taxAmount != null ? taxAmount : BigDecimal.ZERO;
         BigDecimal totalAmount   = safeSubtotal.subtract(safeDiscount).add(safeTaxAmount);
 
+        Booking bookingRef = new Booking();
+        bookingRef.setId(bookingId);
+
         Invoice invoice = Invoice.builder()
-                .bookingId(bookingId)
+                .booking(bookingRef)
                 .subtotal(safeSubtotal)
                 .discount(safeDiscount)
                 .taxAmount(safeTaxAmount)
