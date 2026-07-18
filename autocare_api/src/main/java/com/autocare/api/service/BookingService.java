@@ -1,5 +1,7 @@
 package com.autocare.api.service;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.autocare.api.dto.request.BookingRequestDTO;
 import com.autocare.api.dto.service.*;
 import com.autocare.api.dto.response.BookingResponseDTO;
@@ -24,6 +26,8 @@ public class BookingService {
     private final GarageRepository garageRepository;
     private final RepairServiceRepository repairServiceRepository;
     private final GarageServiceLinkRepository garageServiceLinkRepository;
+    // THÊM:UserRepository để tìm thông tin khách hàng từ token đăng nhập
+    private final UserRepository userRepository;
 
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO req) {
@@ -107,6 +111,25 @@ public class BookingService {
                 .stream().map(this::toDto).toList();
     }
 
+    // THÊM: Logic xử lý lấy lịch hẹn tự động theo Token cho tính năng của TV3
+    @Transactional(readOnly = true)
+    public List<BookingResponseDTO> getMyBookings() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new RuntimeException("Bạn chưa đăng nhập hoặc Token không hợp lệ");
+        }
+
+        User currentUser = userRepository.findByEmailOrPhone(auth.getName(), auth.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        List<Booking> bookings = bookingRepository.findByVehicle_UserIdOrderByCreatedAtDesc(currentUser.getId());
+
+        // Sử dụng hàm toDto có sẵn ở dưới để dọn sạch lỗi constructor
+        return bookings.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     private BookingResponseDTO toDto(Booking b) {
         List<BookingItem> items = bookingItemRepository.findByBooking_Id(b.getId());
 
@@ -153,4 +176,5 @@ public class BookingService {
                 : "000000";
         return "DL" + datePart + b.getId();
     }
+
 }

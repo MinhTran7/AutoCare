@@ -18,13 +18,14 @@ public class BookingStatusLogResponse {
     }
 
     public BookingStatusLogResponse(BookingStatusLog log) {
-        this.id         = log.getId();
-        this.bookingId  = log.getBookingId();
-        this.oldStatus  = log.getOldStatus();
-        this.newStatus  = log.getNewStatus();
-        this.changedBy  = log.getChangedBy();
-        this.note       = log.getNote();
-        this.changedAt  = log.getChangedAt();
+        this.id        = log.getId();
+        this.bookingId = log.getBookingId();
+        this.oldStatus = log.getOldStatus();
+        this.newStatus = log.getNewStatus();
+        // getChangedBy() giờ trả về User object → lấy getId()
+        this.changedBy = log.getChangedBy() != null ? log.getChangedBy().getId() : null;
+        this.note      = log.getNote();
+        this.changedAt = log.getChangedAt();
     }
 
     public Integer getId() { return id; }

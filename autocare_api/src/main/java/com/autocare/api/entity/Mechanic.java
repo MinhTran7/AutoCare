@@ -21,9 +21,9 @@ public class Mechanic {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    // Mapping đến entity Garage (nếu bạn đã tạo)
-    @Column(name = "garage_id")
-    private Integer garageId;
+    @ManyToOne
+    @JoinColumn(name = "garage_id")
+    private Garage garage;
 
     @Column(length = 100)
     private String specialty;
@@ -40,9 +40,10 @@ public class Mechanic {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
-    
+
     public enum MechanicStatus {
-    AVAILABLE, BUSY, OFF
-}
+        AVAILABLE, BUSY, OFF
+    }
+
 }
 

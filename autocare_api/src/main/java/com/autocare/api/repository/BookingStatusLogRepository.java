@@ -8,13 +8,10 @@ import java.util.Optional;
 
 public interface BookingStatusLogRepository extends JpaRepository<BookingStatusLog, Integer> {
 
-    // Lấy toàn bộ lịch sử trạng thái của 1 booking, sắp xếp theo thời gian tăng dần
-    // → dùng để vẽ Timeline Stepper trên app
-    List<BookingStatusLog> findByBookingIdOrderByChangedAtAsc(Integer bookingId);
+    // Dùng booking.id thay vì bookingId (vì Entity dùng @ManyToOne Booking)
+    List<BookingStatusLog> findByBooking_IdOrderByChangedAtAsc(Integer bookingId);
 
-    // Lấy trạng thái mới nhất của 1 booking
-    Optional<BookingStatusLog> findTopByBookingIdOrderByChangedAtDesc(Integer bookingId);
+    Optional<BookingStatusLog> findTopByBooking_IdOrderByChangedAtDesc(Integer bookingId);
 
-    // Kiểm tra booking đã từng có trạng thái cụ thể chưa
-    boolean existsByBookingIdAndNewStatus(Integer bookingId, String newStatus);
+    boolean existsByBooking_IdAndNewStatus(Integer bookingId, String newStatus);
 }

@@ -7,18 +7,14 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Integer> {
 
-    // Lấy tất cả thông báo của user, mới nhất lên trước
-    List<Notification> findByUserIdOrderByCreatedAtDesc(Integer userId);
+    // Dùng user.id thay vì userId (vì Entity dùng @ManyToOne User)
+    List<Notification> findByUser_IdOrderByCreatedAtDesc(Integer userId);
 
-    // Lấy thông báo chưa đọc của user
-    List<Notification> findByUserIdAndIsReadFalseOrderByCreatedAtDesc(Integer userId);
+    List<Notification> findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(Integer userId);
 
-    // Đếm số thông báo chưa đọc → hiển thị badge trên app
-    long countByUserIdAndIsReadFalse(Integer userId);
+    long countByUser_IdAndIsReadFalse(Integer userId);
 
-    // Lấy thông báo theo loại
-    List<Notification> findByUserIdAndTypeOrderByCreatedAtDesc(Integer userId, String type);
+    List<Notification> findByUser_IdAndTypeOrderByCreatedAtDesc(Integer userId, String type);
 
-    // Lấy thông báo liên quan đến 1 booking
-    List<Notification> findByBookingIdOrderByCreatedAtDesc(Integer bookingId);
+    List<Notification> findByBooking_IdOrderByCreatedAtDesc(Integer bookingId);
 }

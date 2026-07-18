@@ -10,6 +10,8 @@ public class ReviewResponse {
     private Integer bookingId;
     private Integer userId;
     private Integer garageId;
+    private Integer serviceId;      // MỚI
+    private String serviceName;     // MỚI
     private Integer rating;
     private String comment;
     private String images;
@@ -31,6 +33,12 @@ public class ReviewResponse {
         this.isVisible = review.getIsVisible();
         this.createdAt = review.getCreatedAt();
         this.updatedAt = review.getUpdatedAt();
+
+        // MỚI: lấy serviceId/serviceName qua booking -> service
+        if (review.getBooking() != null && review.getBooking().getService() != null) {
+            this.serviceId = review.getBooking().getService().getId();
+            this.serviceName = review.getBooking().getService().getName();
+        }
     }
 
     public Integer getId() { return id; }
@@ -44,6 +52,12 @@ public class ReviewResponse {
 
     public Integer getGarageId() { return garageId; }
     public void setGarageId(Integer garageId) { this.garageId = garageId; }
+
+    public Integer getServiceId() { return serviceId; }
+    public void setServiceId(Integer serviceId) { this.serviceId = serviceId; }
+
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
 
     public Integer getRating() { return rating; }
     public void setRating(Integer rating) { this.rating = rating; }

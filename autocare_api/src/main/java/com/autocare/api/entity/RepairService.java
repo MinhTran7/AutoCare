@@ -18,6 +18,9 @@ public class RepairService {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 500)
+    private String description;
+
     @Column(nullable = false)
     private BigDecimal price;
 
@@ -32,6 +35,23 @@ public class RepairService {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (isHomeService == null) {
+            isHomeService = false;
+        }
+        if (status == null) {
+            status = ServiceStatus.ACTIVE;
+        }
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
     public enum ServiceStatus { ACTIVE, INACTIVE }
 }
