@@ -2,20 +2,15 @@ package com.autocare.api.repository;
 
 import com.autocare.api.entity.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
-<<<<<<< Updated upstream
-=======
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
->>>>>>> Stashed changes
 import java.util.List;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findByVehicle_UserIdOrderByCreatedAtDesc(Integer userId);
-<<<<<<< Updated upstream
-=======
 
     long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
@@ -33,5 +28,5 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findAvailableBookingsForToday(@Param("garageId") Integer garageId);
 
     List<Booking> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
->>>>>>> Stashed changes
+
 }

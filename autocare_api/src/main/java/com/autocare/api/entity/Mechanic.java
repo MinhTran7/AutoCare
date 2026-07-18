@@ -21,7 +21,6 @@ public class Mechanic {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-
     @ManyToOne
     @JoinColumn(name = "garage_id")
     private Garage garage;
