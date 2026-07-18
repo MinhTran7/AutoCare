@@ -1,7 +1,7 @@
 package com.autocare.api.dto.response;
 
 import com.autocare.api.entity.Review;
-
+import com.autocare.api.entity.Booking;
 import java.time.LocalDateTime;
 
 public class ReviewResponse {
@@ -35,9 +35,14 @@ public class ReviewResponse {
         this.updatedAt = review.getUpdatedAt();
 
         // MỚI: lấy serviceId/serviceName qua booking -> service
-        if (review.getBooking() != null && review.getBooking().getService() != null) {
-            this.serviceId = review.getBooking().getService().getId();
-            this.serviceName = review.getBooking().getService().getName();
+        if (review.getBooking() != null &&
+                review.getBooking().getBookingItems() != null &&
+                !review.getBooking().getBookingItems().isEmpty()) {
+
+            // Lấy dịch vụ đầu tiên trong danh sách (giả định 1 booking = 1 service)
+            var firstItem = review.getBooking().getBookingItems().get(0);
+            this.serviceId = firstItem.getService().getId();
+            this.serviceName = firstItem.getService().getName();
         }
     }
 

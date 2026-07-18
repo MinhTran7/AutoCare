@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../services/notification_service.dart';
 import '../../storage/token_storage.dart';
 import '../../services/vehicle_service.dart';
 import '../booking/repair_type_screen.dart';
@@ -37,7 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (vehicles.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bạn chưa có xe nào, vui lòng thêm xe trước khi đặt lịch')),
+          const SnackBar(content: Text(
+              'Bạn chưa có xe nào, vui lòng thêm xe trước khi đặt lịch')),
         );
         return;
       }
@@ -45,14 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
       if (vehicles.length == 1) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => RepairTypeScreen(vehicle: vehicles.first)),
+          MaterialPageRoute(
+              builder: (_) => RepairTypeScreen(vehicle: vehicles.first)),
         );
         return;
       }
 
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => SelectVehicleForBookingScreen(vehicles: vehicles)),
+        MaterialPageRoute(
+            builder: (_) => SelectVehicleForBookingScreen(vehicles: vehicles)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -61,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
+  }
 
   // Hàm gọi API lấy danh sách lịch hẹn của User
   Future<List<Map<String, dynamic>>> _fetchMyBookings() async {

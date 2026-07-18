@@ -17,9 +17,10 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     // FIX: thêm JOIN FETCH để load sẵn booking + booking.service,
     // tránh LazyInitializationException khi ReviewResponse truy cập booking.getService()
     @Query("""
-        SELECT r FROM Review r
+        SELECT DISTINCT r FROM Review r
         JOIN FETCH r.booking b
-        JOIN FETCH b.service
+        JOIN FETCH b.bookingItems bi
+        JOIN FETCH bi.service
         WHERE r.garage.id = :garageId AND r.isVisible = true
         ORDER BY r.createdAt DESC
         """)

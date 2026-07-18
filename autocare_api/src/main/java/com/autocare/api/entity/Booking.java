@@ -1,9 +1,11 @@
 package com.autocare.api.entity;
 
+import com.autocare.api.dto.admin.GarageResponse;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "bookings")
@@ -22,10 +24,12 @@ public class Booking {
     @JoinColumn(name = "garage_id", nullable = false)
     private Garage garage;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id", nullable = false)
     private BookingSlot slot;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
+    private List<BookingItem> bookingItems;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "mechanic_id")

@@ -55,7 +55,9 @@ public class MechanicService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn"));
 
         // 1. Lấy giá dịch vụ cơ bản
-        BigDecimal servicePrice = booking.getService().getPrice();
+        BigDecimal servicePrice = booking.getBookingItems().stream()
+                .map(BookingItem::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 2. Tính tổng tiền phụ tùng thay thế
         List<BookingSparePart> parts = bookingSparePartRepository.findByBookingId(bookingId);
@@ -67,7 +69,7 @@ public class MechanicService {
         BigDecimal totalAmount = servicePrice.add(partsTotal);
 
         // 4. Tạo hoặc cập nhật hóa đơn
-        Invoice invoice = invoiceRepository.findByBookingId(bookingId)
+        Invoice invoice = invoiceRepository.findByBooking_Id(bookingId)
                 .orElse(new Invoice());
         invoice.setBooking(booking);
         invoice.setTotalAmount(totalAmount);
