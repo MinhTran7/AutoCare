@@ -8,6 +8,7 @@ public class CreateMechanicRequest {
     private String password;
     private String address;
     private String avatarUrl;
+    private Integer garageId;
 
     public CreateMechanicRequest() {
     }
@@ -36,6 +37,10 @@ public class CreateMechanicRequest {
         return avatarUrl;
     }
 
+    public Integer getGarageId() {
+        return garageId;
+    }
+
     public void setFullName(String fullName) {
         this.fullName = fullName;
     }
@@ -58,5 +63,9 @@ public class CreateMechanicRequest {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public void setGarageId(Integer garageId) {
+        this.garageId = garageId;
     }
 }
