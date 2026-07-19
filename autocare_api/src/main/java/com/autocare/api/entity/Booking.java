@@ -55,5 +55,7 @@ public class Booking {
     private LocalDateTime updatedAt;
 
     public enum BookingType { GARAGE, HOME, ONLINE }
-    public enum BookingStatus { PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED }
+    
+    public enum BookingStatus { PENDING, CONFIRMED, IN_PROGRESS, WAITING_PAYMENT, COMPLETED, CANCELLED }
+
 }

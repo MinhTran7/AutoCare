@@ -16,12 +16,16 @@ import java.util.List;
 @Transactional
 public class MechanicService {
 
+
     @Autowired private UserRepository userRepository;
     @Autowired private MechanicRepository mechanicRepository;
     @Autowired private BookingRepository bookingRepository;
     @Autowired private BookingSparePartRepository bookingSparePartRepository;
     @Autowired private InvoiceRepository invoiceRepository;
     @Autowired private MechanicAttendanceRepository attendanceRepository;
+    @Autowired
+    private SparePartRepository sparePartRepository;
+
 
     // ── TV3: ghi log trạng thái ───────────────────────────────────────────────
     @Autowired @Lazy
@@ -135,9 +139,68 @@ public class MechanicService {
 
         return saved;
     }
+      
+    public void addSparePart(
+            Integer bookingId,
+            Integer sparePartId,
+            Integer quantity,
+            Integer userId){
 
-    // ── Thợ hoàn thành → COMPLETED + xuất hoá đơn ────────────────────────────
-    public Invoice completeBookingAndCalculateTotal(Integer bookingId, Integer userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() ->
+                        new RuntimeException("Booking not found"));
+
+        Mechanic mechanic = mechanicRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("Mechanic not found"));
+
+        if(booking.getMechanic()==null
+                || !booking.getMechanic().getId().equals(mechanic.getId())){
+
+            throw new RuntimeException("Không phải đơn của bạn");
+        }
+
+        if(booking.getStatus()!=Booking.BookingStatus.IN_PROGRESS){
+
+            throw new RuntimeException("Đơn chưa bắt đầu sửa");
+        }
+
+        SparePart sparePart = sparePartRepository.findById(sparePartId)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy phụ tùng"));
+
+        if(sparePart.getUnitPrice()==null){
+
+            throw new RuntimeException(
+                    "Phụ tùng \"" + sparePart.getPartName()
+                            + "\" chưa có giá bán, vui lòng cập nhật giá trong phần Quản lý kho trước khi sử dụng");
+        }
+
+        if(sparePart.getQuantityInStock()<quantity){
+
+            throw new RuntimeException("Không đủ tồn kho");
+        }
+
+        BookingSparePart item =
+                BookingSparePart.builder()
+                        .booking(booking)
+                        .sparePart(sparePart)
+                        .quantity(quantity)
+                        .price(sparePart.getUnitPrice())
+                        .build();
+
+        bookingSparePartRepository.save(item);
+
+        sparePart.setQuantityInStock(
+                sparePart.getQuantityInStock()-quantity);
+
+        sparePartRepository.save(sparePart);
+    }
+
+    /**
+     * Nghiệp vụ: Hoàn thành đơn, chốt phụ tùng và xuất hóa đơn
+     */
+    public Invoice completeBookingAndCalculateTotal(Integer bookingId,Integer userId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn"));
 
@@ -172,7 +235,8 @@ public class MechanicService {
         invoice.setTotalAmount(totalAmount);
         invoice.setStatus("UNPAID");
 
-        booking.setStatus(Booking.BookingStatus.COMPLETED);
+        // 5. Chuyển trạng thái đơn
+        booking.setStatus(Booking.BookingStatus.WAITING_PAYMENT);
         mechanic.setStatus(Mechanic.MechanicStatus.AVAILABLE);
         mechanicRepository.save(mechanic);
         bookingRepository.save(booking);
