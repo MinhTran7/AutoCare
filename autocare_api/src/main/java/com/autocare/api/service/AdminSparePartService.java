@@ -34,10 +34,13 @@ public class AdminSparePartService {
     public SparePartResponse create(SparePartRequest request) {
         validate(request);
 
+        BigDecimal price = request.getUnitPrice();
+
         SparePart part = SparePart.builder()
                 .partName(request.getPartName().trim())
                 .unit(request.getUnit().trim())
-                .unitPrice(request.getUnitPrice() != null ? request.getUnitPrice() : BigDecimal.ZERO)
+                .costPrice(price)
+                .sellingPrice(price)
                 .quantityInStock(request.getQuantityInStock() != null ? request.getQuantityInStock() : 0)
                 .minStockLevel(request.getMinStockLevel() != null ? request.getMinStockLevel() : 0)
                 .status(normalizeStatus(request.getStatus()))
@@ -52,12 +55,19 @@ public class AdminSparePartService {
         SparePart part = getEntity(id);
         part.setPartName(request.getPartName().trim());
         part.setUnit(request.getUnit().trim());
-        part.setUnitPrice(request.getUnitPrice() != null ? request.getUnitPrice() : BigDecimal.ZERO);
+        part.setSellingPrice(request.getUnitPrice());
+        // Không đụng cost_price trừ khi chưa có — tránh ghi đè dữ liệu nhóm
+        if (part.getCostPrice() == null) {
+            part.setCostPrice(request.getUnitPrice());
+        }
         if (request.getQuantityInStock() != null) {
             part.setQuantityInStock(request.getQuantityInStock());
         }
         if (request.getMinStockLevel() != null) {
             part.setMinStockLevel(request.getMinStockLevel());
+        }
+        if (part.getStatus() == null || part.getStatus().isBlank()) {
+            part.setStatus("ACTIVE");
         }
         if (request.getStatus() != null && !request.getStatus().isBlank()) {
             part.setStatus(normalizeStatus(request.getStatus()));
@@ -97,6 +107,9 @@ public class AdminSparePartService {
         }
         if (request.getUnit() == null || request.getUnit().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đơn vị không được để trống");
+        }
+        if (request.getUnitPrice() == null || request.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đơn giá phải lớn hơn 0");
         }
         if (request.getQuantityInStock() != null && request.getQuantityInStock() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Số lượng tồn không hợp lệ");
