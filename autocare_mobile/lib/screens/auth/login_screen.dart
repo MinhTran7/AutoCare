@@ -281,8 +281,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailOrPhoneController,
                   keyboardType: TextInputType.text,
                   decoration: const InputDecoration(
-                    labelText: 'Email hoặc số điện thoại',
-                    hintText: 'example@gmail.com hoặc 0901234567',
+                    labelText: 'Email',
+                    hintText: 'example@gmail.com',
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),

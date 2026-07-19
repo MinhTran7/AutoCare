@@ -103,19 +103,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  String? _validatePhone(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Số điện thoại không được để trống';
-    }
-
-    final phoneRegex = RegExp(r'^[0-9]{10}$');
-
-    if (!phoneRegex.hasMatch(value.trim())) {
-      return 'Số điện thoại phải gồm đúng 10 số';
-    }
-
-    return null;
-  }
 
   String? _validatePassword(String? value) {
     if (value == null || value.trim().isEmpty) {
@@ -209,24 +196,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                     const SizedBox(height: 16),
 
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      maxLength: 10,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                      ],
-                      decoration: const InputDecoration(
-                        labelText: 'Số điện thoại',
-                        hintText: '0901234567',
-                        prefixIcon: Icon(Icons.phone),
-                        border: OutlineInputBorder(),
-                        counterText: '',
-                      ),
-                      validator: _validatePhone,
-                    ),
-
-                    const SizedBox(height: 16),
 
                     TextFormField(
                       controller: _passwordController,
