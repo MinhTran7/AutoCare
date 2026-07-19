@@ -16,4 +16,8 @@ public interface MechanicRepository extends JpaRepository<Mechanic, Integer> {
             Integer garageId,
             Mechanic.MechanicStatus status
     );
+
+    Optional<Mechanic> findByUser_Email(String email);
+
+    Optional<Mechanic> findByUser_Phone(String phone);
 }

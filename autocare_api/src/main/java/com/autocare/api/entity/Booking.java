@@ -1,6 +1,5 @@
 package com.autocare.api.entity;
 
-import com.autocare.api.dto.admin.GarageResponse;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;

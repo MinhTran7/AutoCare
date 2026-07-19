@@ -82,7 +82,7 @@ public class BookingService {
                 .serviceAddress(type == Booking.BookingType.HOME ? req.getServiceAddress() : null)
                 .latitude(type == Booking.BookingType.HOME ? req.getLatitude() : null)
                 .longitude(type == Booking.BookingType.HOME ? req.getLongitude() : null)
-                .status(Booking.BookingStatus.CONFIRMED)
+                .status(Booking.BookingStatus.PENDING)
                 .build();
         booking = bookingRepository.save(booking);
 

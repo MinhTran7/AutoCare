@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `bookings` (
   `service_address` text,
   `latitude` decimal(10,7) DEFAULT NULL,
   `longitude` decimal(10,7) DEFAULT NULL,
-  `status` enum('PENDING','CONFIRMED','IN_PROGRESS','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+  `status` enum('PENDING','CONFIRMED','IN_PROGRESS','WAITING_PAYMENT','COMPLETED','CANCELLED') NOT NULL DEFAULT 'PENDING',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -311,6 +311,20 @@ CREATE TABLE IF NOT EXISTS `mechanic_attendances` (
   UNIQUE KEY `uk_mechanic_date` (`mechanic_id`, `work_date`),
   CONSTRAINT `fk_attendance_mechanic` FOREIGN KEY (`mechanic_id`) REFERENCES `mechanics` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+ALTER TABLE bookings MODIFY service_id INT NULL;
+
+CREATE TABLE IF NOT EXISTS booking_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    service_id INT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_booking_items_booking FOREIGN KEY (booking_id) REFERENCES bookings(id),
+    CONSTRAINT fk_booking_items_service FOREIGN KEY (service_id) REFERENCES services(id)
+);
+
+SELECT * FROM mechanics;    
+SELECT * FROM garages;
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
