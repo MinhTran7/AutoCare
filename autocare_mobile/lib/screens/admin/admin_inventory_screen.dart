@@ -50,12 +50,21 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
     return false;
   }
 
+  String _formatPrice(dynamic value) {
+    if (value == null) return '—';
+    final n = value is num ? value.toDouble() : double.tryParse('$value');
+    if (n == null) return '—';
+    return n.toStringAsFixed(0);
+  }
+
   Future<void> _openForm({Map<String, dynamic>? existing}) async {
     final nameCtrl =
         TextEditingController(text: '${existing?['partName'] ?? ''}');
     final unitCtrl = TextEditingController(text: '${existing?['unit'] ?? ''}');
-    final priceCtrl =
-        TextEditingController(text: '${existing?['unitPrice'] ?? ''}');
+    final rawPrice = existing?['unitPrice'] ?? existing?['sellingPrice'];
+    final priceCtrl = TextEditingController(
+      text: rawPrice == null || rawPrice == 'null' ? '' : '$rawPrice',
+    );
     final qtyCtrl =
         TextEditingController(text: '${existing?['quantityInStock'] ?? '0'}');
     final minCtrl =
@@ -82,7 +91,7 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
                 TextField(
                   controller: priceCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Đơn giá'),
+                  decoration: const InputDecoration(labelText: 'Đơn giá bán'),
                 ),
                 TextField(
                   controller: qtyCtrl,
@@ -111,10 +120,36 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
       ),
     );
 
+    if (saved != true) {
+      nameCtrl.dispose();
+      unitCtrl.dispose();
+      priceCtrl.dispose();
+      qtyCtrl.dispose();
+      minCtrl.dispose();
+      return;
+    }
+
+    final price = double.tryParse(priceCtrl.text.trim());
+    if (price == null || price <= 0) {
+      nameCtrl.dispose();
+      unitCtrl.dispose();
+      priceCtrl.dispose();
+      qtyCtrl.dispose();
+      minCtrl.dispose();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đơn giá phải lớn hơn 0'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final body = {
       'partName': nameCtrl.text.trim(),
       'unit': unitCtrl.text.trim(),
-      'unitPrice': double.tryParse(priceCtrl.text.trim()) ?? 0,
+      'unitPrice': price,
       'quantityInStock': int.tryParse(qtyCtrl.text.trim()) ?? 0,
       'minStockLevel': int.tryParse(minCtrl.text.trim()) ?? 0,
       'status': 'ACTIVE',
@@ -125,8 +160,6 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
     priceCtrl.dispose();
     qtyCtrl.dispose();
     minCtrl.dispose();
-
-    if (saved != true) return;
 
     try {
       if (existing == null) {
@@ -189,7 +222,7 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
                           subtitle: Text(
                             'Tồn: ${item['quantityInStock']} ${item['unit']}'
                             ' · Min: ${item['minStockLevel']}'
-                            ' · Giá: ${item['unitPrice']}'
+                            ' · Giá: ${_formatPrice(item['unitPrice'] ?? item['sellingPrice'])}'
                             '${low ? '\n⚠ Sắp hết hàng' : ''}',
                           ),
                           isThreeLine: true,

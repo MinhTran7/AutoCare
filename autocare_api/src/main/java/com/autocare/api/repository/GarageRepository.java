@@ -8,5 +8,7 @@ import java.util.List;
 public interface GarageRepository extends JpaRepository<Garage, Integer> {
     List<Garage> findByStatus(Garage.GarageStatus status);
 
+    List<Garage> findByStatusOrderByNameAsc(Garage.GarageStatus status);
+
     List<Garage> findAllByOrderByNameAsc();
 }
