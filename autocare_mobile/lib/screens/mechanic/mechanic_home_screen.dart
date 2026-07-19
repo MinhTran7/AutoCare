@@ -13,7 +13,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   final MechanicApiService _apiService = MechanicApiService();
   List<dynamic> _bookings = [];
   bool _isLoading = true;
-  String _currentStatus = 'AVAILABLE';
+
 
   @override
   void initState() {
@@ -24,7 +24,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
     try {
-      final bookings = await _apiService.fetchAssignedBookings();
+      final bookings = await _apiService.getWaitingBookings();
       setState(() {
         _bookings = bookings;
         _isLoading = false;
@@ -39,23 +39,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     }
   }
 
-  Future<void> _updateMechanicStatus(String newStatus) async {
-    try {
-      await _apiService.updateStatus(newStatus);
-      setState(() => _currentStatus = newStatus);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã cập nhật trạng thái thành: $newStatus'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi cập nhật trạng thái: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -63,20 +47,64 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       appBar: AppBar(
         title: const Text('Bảng điều khiển Thợ máy'),
         actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Đổi trạng thái',
-            onSelected: _updateMechanicStatus,
-            icon: const Icon(Icons.account_circle),
-            itemBuilder: (BuildContext context) {
-              return {'AVAILABLE', 'BUSY'}.map((String choice) {
-                return PopupMenuItem<String>(
-                  value: choice,
-                  child: Text(choice),
+          IconButton(
+            icon: const Icon(Icons.login),
+            tooltip: "Check In",
+            onPressed: () async {
+              try {
+                await _apiService.checkIn();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Check In thành công"),
+                  ),
                 );
-              }).toList();
+              } catch (e) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString().replaceFirst("Exception: ", "")),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadBookings),
+
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: "Check Out",
+            onPressed: () async {
+              try {
+                await _apiService.checkOut();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Check Out thành công"),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e.toString().replaceFirst("Exception: ", "")),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadBookings,
+          ),
         ],
       ),
       // Thêm Drawer tại đây
@@ -128,17 +156,6 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            color: Colors.blue.shade50,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Trạng thái hoạt động:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(_currentStatus, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-              ],
-            ),
-          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -148,14 +165,165 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
               itemCount: _bookings.length,
               itemBuilder: (context, index) {
                 final booking = _bookings[index];
+
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                  child: ListTile(
-                    title: Text('Dịch vụ: ${booking['serviceName'] ?? 'N/A'}'),
-                    subtitle: Text('Trạng thái: ${booking['status']}'),
-                    trailing: ElevatedButton(
-                      onPressed: () { /* Chuyển trang chi tiết */ },
-                      child: const Text('Chi tiết'),
+                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        Text(
+                          booking["vehicle"]?["licensePlate"] ?? "Không có biển số",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Text("Garage: ${booking["garage"]?["name"] ?? ""}"),
+
+                        Text(
+                          "Ngày: ${booking["slot"]?["bookingDate"] ?? ""}",
+                        ),
+
+                        Text(
+                          "Giờ: ${booking["slot"]?["startTime"] ?? ""}",
+                        ),
+
+                        Text(
+                          "Trạng thái: ${booking["status"]}",
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+
+                            if (booking["status"] == "PENDING") ...[
+                              ElevatedButton(
+                                onPressed: () async {
+                                  try {
+                                    await _apiService.acceptBooking(
+                                      booking["id"],
+                                    );
+
+                                    _loadBookings();
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Đã nhận đơn"),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text("Nhận"),
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              OutlinedButton(
+                                onPressed: () async {
+                                  try {
+                                    await _apiService.rejectBooking(
+                                      booking["id"],
+                                    );
+
+                                    _loadBookings();
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Đã từ chối"),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text("Từ chối"),
+                              ),
+                            ],
+
+                            if (booking["status"] == "CONFIRMED")
+                              ElevatedButton(
+                                onPressed: () async {
+                                  try {
+                                    await _apiService.startRepair(
+                                      booking["id"],
+                                    );
+
+                                    _loadBookings();
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Đã bắt đầu sửa"),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text("Bắt đầu"),
+                              ),
+
+                            if (booking["status"] == "IN_PROGRESS")
+                              ElevatedButton(
+                                onPressed: () async {
+                                  try {
+                                    await _apiService.completeBooking(
+                                      booking["id"],
+                                    );
+
+                                    _loadBookings();
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Đã hoàn thành"),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text("Hoàn thành"),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 );

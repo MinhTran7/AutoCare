@@ -3,6 +3,7 @@ package com.autocare.api.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "booking_items")
@@ -14,6 +15,7 @@ public class BookingItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
+    @JsonIgnore
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -5,9 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface MechanicAttendanceRepository extends JpaRepository<MechanicAttendance, Integer> {
     Optional<MechanicAttendance> findByMechanicIdAndWorkDate(Integer mechanicId, LocalDate workDate);
+    List<MechanicAttendance> findByMechanicIdOrderByWorkDateDesc(Integer mechanicId);
 }

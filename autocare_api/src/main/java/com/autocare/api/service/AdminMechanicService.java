@@ -4,7 +4,11 @@ import com.autocare.api.dto.admin.CreateMechanicRequest;
 import com.autocare.api.dto.admin.MechanicAccountResponse;
 import com.autocare.api.dto.admin.UpdateMechanicRequest;
 import com.autocare.api.dto.admin.UpdateMechanicStatusRequest;
+import com.autocare.api.entity.Garage;
+import com.autocare.api.entity.Mechanic;
 import com.autocare.api.entity.User;
+import com.autocare.api.repository.GarageRepository;
+import com.autocare.api.repository.MechanicRepository;
 import com.autocare.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +25,8 @@ public class AdminMechanicService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GarageRepository garageRepository;
+    private final MechanicRepository mechanicRepository;
 
     public MechanicAccountResponse createMechanic(CreateMechanicRequest request) {
         validateCreateMechanicRequest(request);
@@ -55,6 +61,20 @@ public class AdminMechanicService {
                 .build();
 
         User savedMechanic = userRepository.save(mechanic);
+
+        Garage garage = garageRepository.findById(request.getGarageId())
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Garage not found"));
+
+        Mechanic mechanicEntity = Mechanic.builder()
+                .user(savedMechanic)
+                .garage(garage)
+                .status(Mechanic.MechanicStatus.AVAILABLE)
+                .build();
+
+        mechanicRepository.save(mechanicEntity);
 
         return new MechanicAccountResponse(savedMechanic);
     }
