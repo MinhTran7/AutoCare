@@ -70,6 +70,26 @@ class MechanicApiService {
     throw Exception(response.body);
   }
 
+  Future<void> addSparePart(
+      int bookingId,
+      int sparePartId,
+      int quantity,
+      ) async {
+
+    final response = await http.post(
+      Uri.parse("${ApiConstants.baseUrl}/api/mechanics/bookings/$bookingId/parts"),
+      headers: await _headers(),
+      body: jsonEncode({
+        "sparePartId": sparePartId,
+        "quantity": quantity,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(response.body);
+    }
+  }
+
   //----------------------------
   // Lịch sử
   //----------------------------
