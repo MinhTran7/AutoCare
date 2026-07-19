@@ -14,18 +14,27 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
   List<Map<String, dynamic>> _timeline = [];
   bool _isLoading = true;
 
-  final List<String> _steps = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'];
+  // 🛠️ Đủ 5 bước tuyến tính theo trạng thái nhóm đã thống nhất
+  // (CANCELLED là trạng thái kết thúc riêng, không nằm trong chuỗi này —
+  // vẫn được ẩn ở dưới bằng if (!_isCancelled) như cũ).
+  final List<String> _steps = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'WAITING_PAYMENT', 'COMPLETED'];
+
+  // 🛠️ Thêm nhãn cho WAITING_PAYMENT (trước đây bị thiếu hoàn toàn)
   final Map<String, String> _stepLabel = {
     'PENDING': 'Chờ xác nhận',
     'CONFIRMED': 'Đã xác nhận',
     'IN_PROGRESS': 'Đang sửa chữa',
+    'WAITING_PAYMENT': 'Chờ thanh toán',
     'COMPLETED': 'Hoàn thành',
-    'CANCELLED': 'Đã huỷ',
+    'CANCELLED': 'Từ chối / Đã huỷ',
   };
+
+  // 🛠️ Thêm icon cho WAITING_PAYMENT
   final Map<String, IconData> _stepIcon = {
     'PENDING': Icons.access_time,
     'CONFIRMED': Icons.check_circle_outline,
     'IN_PROGRESS': Icons.build,
+    'WAITING_PAYMENT': Icons.payments_outlined,
     'COMPLETED': Icons.verified,
     'CANCELLED': Icons.cancel,
   };
@@ -81,7 +90,8 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
             // Trạng thái hiện tại
             Card(
               child: ListTile(
-                leading: Icon(_stepIcon[_currentStatus] ?? Icons.info),
+                leading: Icon(_stepIcon[_currentStatus] ?? Icons.info,
+                    color: _isCancelled ? Colors.red : (_currentStatus == 'COMPLETED' ? Colors.green : Colors.blue)),
                 title: const Text('Trạng thái hiện tại'),
                 subtitle: Text(
                   _stepLabel[_currentStatus] ?? _currentStatus,
@@ -89,13 +99,15 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
                 ),
                 trailing: _isCancelled
                     ? const Icon(Icons.cancel, color: Colors.red)
-                    : const Icon(Icons.check_circle, color: Colors.green),
+                    : (_currentStatus == 'COMPLETED'
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : const Icon(Icons.radio_button_checked, color: Colors.blue)),
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Timeline Stepper
+            // Timeline Stepper (Ẩn nếu đơn hàng bị huỷ/từ chối)
             if (!_isCancelled) ...[
               Card(
                 child: Padding(
@@ -114,9 +126,15 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
                       ..._steps.asMap().entries.map((entry) {
                         final index = entry.key;
                         final step = entry.value;
+
+                        // 🛠️ IN_PROGRESS và WAITING_PAYMENT giờ là bước thật
+                        // trong _steps, nên không cần hack effectiveCurrentIndex
+                        // để "giả lập" IN_PROGRESS bằng vị trí của CONFIRMED nữa —
+                        // dùng thẳng vị trí thực của _currentStatus trong _steps.
                         final currentIndex = _steps.indexOf(_currentStatus);
+
                         final isDone = index <= currentIndex;
-                        final isActive = index == currentIndex;
+                        final isActive = step == _currentStatus;
                         final isLast = index == _steps.length - 1;
 
                         return Row(

@@ -35,7 +35,8 @@ class ReviewService {
       final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
       return data.map((e) => Map<String, dynamic>.from(e)).toList();
     }
-    throw Exception('Không thể tải danh sách đánh giá (status: ${response.statusCode})');
+    // FIX: in luôn nội dung lỗi thật từ backend (Spring Boot trả JSON có "message")
+    throw Exception('Không thể tải danh sách đánh giá (status: ${response.statusCode}) - Body: ${response.body}');
   }
 
   Future<Map<String, dynamic>?> getByBookingId(int bookingId) async {
@@ -58,7 +59,8 @@ class ReviewService {
       body: jsonEncode({'garageId': garageId, 'rating': rating, 'comment': comment}),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Tạo đánh giá thất bại (status: ${response.statusCode})');
+      // FIX: in nội dung lỗi thật từ backend
+      throw Exception('Tạo đánh giá thất bại (status: ${response.statusCode}) - Body: ${response.body}');
     }
     return jsonDecode(utf8.decode(response.bodyBytes));
   }
