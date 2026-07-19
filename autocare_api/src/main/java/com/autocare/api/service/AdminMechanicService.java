@@ -67,7 +67,7 @@ public class AdminMechanicService {
                 .build();
 
         User savedMechanic = userRepository.save(mechanic);
-
+      
         Mechanic mechanicEntity = Mechanic.builder()
                 .user(savedMechanic)
                 .garage(garage)

@@ -1,12 +1,16 @@
 package com.autocare.api.service;
 
+import com.autocare.api.entity.Booking;
+import com.autocare.api.entity.Garage;
 import com.autocare.api.entity.Review;
 import com.autocare.api.entity.User;
+import com.autocare.api.repository.BookingRepository;
 import com.autocare.api.repository.ReviewRepository;
 import com.autocare.api.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,51 +19,64 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingStatusLogService bookingStatusLogService;
 
     public ReviewService(
             ReviewRepository reviewRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            BookingRepository bookingRepository,
+            BookingStatusLogService bookingStatusLogService
     ) {
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
+        this.bookingRepository = bookingRepository;
+        this.bookingStatusLogService = bookingStatusLogService;
     }
 
-    // ── Lấy tất cả review của 1 garage ───────────────────────────────────────
+    @Transactional(readOnly = true)
     public List<Review> getGarageReviews(Integer garageId) {
         return reviewRepository
-                .findByGarageIdAndIsVisibleTrueOrderByCreatedAtDesc(garageId);
+                .findByGarage_IdAndIsVisibleTrueOrderByCreatedAtDesc(garageId);
     }
 
-    // ── Lấy review của user hiện tại ─────────────────────────────────────────
     public List<Review> getMyReviews() {
         User currentUser = getCurrentUser();
         return reviewRepository
-                .findByUserIdOrderByCreatedAtDesc(currentUser.getId());
+                .findByUser_IdOrderByCreatedAtDesc(currentUser.getId());
     }
 
-    // ── Lấy review theo bookingId ─────────────────────────────────────────────
     public Review getByBookingId(Integer bookingId) {
         return reviewRepository
-                .findByBookingId(bookingId)
+                .findByBooking_Id(bookingId)
                 .orElseThrow(() -> new RuntimeException("Chưa có đánh giá cho booking này"));
     }
 
-    // ── Tạo review sau khi dịch vụ hoàn thành ────────────────────────────────
+    @Transactional
     public Review createReview(Integer bookingId, Integer garageId,
                                Integer rating, String comment, String images) {
         User currentUser = getCurrentUser();
 
-        // Mỗi booking chỉ được review 1 lần
-        if (reviewRepository.existsByBookingId(bookingId)) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy booking #" + bookingId));
+
+        String currentStatus = bookingStatusLogService.getCurrentStatus(bookingId);
+        if (!"COMPLETED".equals(currentStatus)) {
+            throw new RuntimeException("Chỉ có thể đánh giá sau khi dịch vụ hoàn thành");
+        }
+
+        if (reviewRepository.existsByBooking_Id(bookingId)) {
             throw new RuntimeException("Bạn đã đánh giá booking này rồi");
         }
 
         validateRating(rating);
 
+        Garage garage = booking.getGarage();
+
         Review review = Review.builder()
-                .bookingId(bookingId)
-                .userId(currentUser.getId())
-                .garageId(garageId)
+                .booking(booking)
+                .user(currentUser)
+                .garage(garage)
                 .rating(rating)
                 .comment(normalizeNullable(comment))
                 .images(images)
@@ -69,13 +86,13 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
-    // ── Cập nhật review (chỉ được sửa review của chính mình) ─────────────────
+    @Transactional
     public Review updateReview(Integer bookingId, Integer rating,
                                String comment, String images) {
         User currentUser = getCurrentUser();
 
         Review review = reviewRepository
-                .findByBookingId(bookingId)
+                .findByBooking_Id(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
 
         if (!review.getUserId().equals(currentUser.getId())) {
@@ -83,7 +100,6 @@ public class ReviewService {
         }
 
         validateRating(rating);
-
         review.setRating(rating);
         review.setComment(normalizeNullable(comment));
         review.setImages(images);
@@ -91,12 +107,11 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
-    // ── Xoá review (chỉ được xoá review của chính mình) ─────────────────────
     public void deleteReview(Integer bookingId) {
         User currentUser = getCurrentUser();
 
         Review review = reviewRepository
-                .findByBookingId(bookingId)
+                .findByBooking_Id(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
 
         if (!review.getUserId().equals(currentUser.getId())) {
@@ -106,44 +121,33 @@ public class ReviewService {
         reviewRepository.delete(review);
     }
 
-    // ── Ẩn/hiện review (dành cho Admin) ──────────────────────────────────────
     public Review toggleVisibility(Integer reviewId) {
         Review review = reviewRepository
                 .findById(reviewId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đánh giá"));
-
         review.setIsVisible(!review.getIsVisible());
         return reviewRepository.save(review);
     }
 
-    // ── Lấy review theo số sao (filter) ──────────────────────────────────────
     public List<Review> getGarageReviewsByRating(Integer garageId, Integer rating) {
         validateRating(rating);
         return reviewRepository
-                .findByGarageIdAndRatingAndIsVisibleTrue(garageId, rating);
+                .findByGarage_IdAndRatingAndIsVisibleTrue(garageId, rating);
     }
 
-    // ── Validate ─────────────────────────────────────────────────────────────
     private void validateRating(Integer rating) {
         if (rating == null || rating < 1 || rating > 5) {
             throw new RuntimeException("Số sao phải từ 1 đến 5");
         }
     }
 
-    // ── Helper ───────────────────────────────────────────────────────────────
     private User getCurrentUser() {
-        Authentication authentication = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
-
-        if (authentication == null || authentication.getName() == null) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
             throw new RuntimeException("Bạn chưa đăng nhập");
         }
-
-        String emailOrPhone = authentication.getName();
-
         return userRepository
-                .findByEmailOrPhone(emailOrPhone, emailOrPhone)
+                .findByEmailOrPhone(auth.getName(), auth.getName())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
     }
 

@@ -12,23 +12,20 @@ import java.util.Optional;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
 
-    Optional<Invoice> findByBookingId(Integer bookingId);
+    // TV3 — tìm theo booking
+    Optional<Invoice> findByBooking_Id(Integer bookingId);
 
     Optional<Invoice> findByInvoiceCode(String invoiceCode);
 
-    List<Invoice> findByBookingIdIn(List<Integer> bookingIds);
+    List<Invoice> findByBooking_IdIn(List<Integer> bookingIds);
 
     List<Invoice> findByStatus(String status);
 
-    boolean existsByBookingId(Integer bookingId);
+    boolean existsByBooking_Id(Integer bookingId);
 
-    @Query("""
-            SELECT COALESCE(SUM(i.totalAmount), 0)
-            FROM Invoice i
-            WHERE i.status = 'PAID'
-              AND i.paidAt IS NOT NULL
-              AND i.paidAt BETWEEN :from AND :to
-            """)
+    // TV5 — Admin Dashboard: tổng doanh thu trong khoảng thời gian
+    @Query("SELECT COALESCE(SUM(i.totalAmount), 0) FROM Invoice i " +
+            "WHERE i.paidAt BETWEEN :from AND :to AND i.status = 'PAID'")
     BigDecimal sumPaidAmountBetween(
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to

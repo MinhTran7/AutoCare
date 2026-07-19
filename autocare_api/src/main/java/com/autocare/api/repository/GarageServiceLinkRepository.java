@@ -11,4 +11,6 @@ public interface GarageServiceLinkRepository extends JpaRepository<GarageService
     List<GarageServiceLink> findByGarage_Id(Integer garageId);
 
     boolean existsByGarage_IdAndService_Id(Integer garageId, Integer serviceId);
+
+    List<GarageServiceLink> findByService_IdIn(List<Integer> serviceIds);
 }

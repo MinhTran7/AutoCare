@@ -21,8 +21,15 @@ public class Invoice {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "booking_id", nullable = false, unique = true)
-    private Integer bookingId;
+    // ── Quan hệ với Booking (TV2 đã có Booking entity) ───────────────────────
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false, unique = true)
+    private Booking booking;
+
+    // Giữ lại để tiện dùng khi chỉ cần ID
+    public Integer getBookingId() {
+        return booking != null ? booking.getId() : null;
+    }
 
     @Column(name = "invoice_code", length = 30, unique = true)
     private String invoiceCode;
@@ -68,12 +75,10 @@ public class Invoice {
     public void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-
         if (status == null || status.isBlank()) status = "UNPAID";
         if (subtotal  == null) subtotal  = BigDecimal.ZERO;
         if (discount  == null) discount  = BigDecimal.ZERO;
         if (taxAmount == null) taxAmount = BigDecimal.ZERO;
-
         if (invoiceCode == null || invoiceCode.isBlank()) {
             String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             invoiceCode = "INV-" + date + "-TEMP";

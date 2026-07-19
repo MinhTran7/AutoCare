@@ -1,31 +1,29 @@
 package com.autocare.api.dto.request;
 
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.List;
 
-/** Du lieu FE gui len khi nguoi dung bam "Dat lich" o man hinh 6. */
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class BookingRequestDTO {
-
     @NotNull(message = "vehicleId khong duoc de trong")
     private Integer vehicleId;
 
     @NotNull(message = "garageId khong duoc de trong")
     private Integer garageId;
 
-    @NotNull(message = "serviceId khong duoc de trong")
-    private Integer serviceId;
+    @NotEmpty(message = "Vui long chon it nhat 1 dich vu")
+    private List<Integer> serviceIds;
 
     @NotNull(message = "slotId khong duoc de trong")
     private Integer slotId;
 
     @NotNull(message = "bookingType khong duoc de trong")
-    private String bookingType; // GARAGE hoac HOME
+    private String bookingType;
 
-    // Chi bat buoc khi bookingType = HOME (man hinh 5A "Chon dia diem sua chua")
     private String serviceAddress;
     private BigDecimal latitude;
     private BigDecimal longitude;
 }
-

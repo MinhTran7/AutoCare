@@ -1,16 +1,18 @@
 package com.autocare.api.service;
 
-
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.autocare.api.dto.request.BookingRequestDTO;
+import com.autocare.api.dto.service.*;
 import com.autocare.api.dto.response.BookingResponseDTO;
 import com.autocare.api.entity.*;
-import com.autocare.api.exception.BusinessException;
-import com.autocare.api.exception.ResourceNotFoundException;
 import com.autocare.api.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.autocare.api.dto.service.BookingItemDTO;
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -19,74 +21,153 @@ import java.util.List;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final BookingItemRepository bookingItemRepository;
     private final BookingSlotRepository bookingSlotRepository;
     private final VehicleRepository vehicleRepository;
     private final GarageRepository garageRepository;
     private final RepairServiceRepository repairServiceRepository;
     private final GarageServiceLinkRepository garageServiceLinkRepository;
+    private final UserRepository userRepository;
+    // ── Thêm repository của bảng log vào Constructor (Lombok tự sinh tự động nhờ @RequiredArgsConstructor) ──
+    private final BookingStatusLogRepository bookingStatusLogRepository;
 
-    /**
-     * Man hinh 6 -> 7: "Xac nhan dat lich" -> "Dat lich thanh cong".
-     * - Kiem tra garage co ho tro dich vu duoc chon khong.
-     * - Kiem tra slot con AVAILABLE khong (tranh 2 nguoi dat trung gio).
-     * - Neu bookingType = HOME thi bat buoc phai co dia chi.
-     * - Danh dau slot la BOOKED va tao Booking voi trang thai CONFIRMED.
-     */
+    // ── TV3: inject BookingStatusLogService để ghi log ───────────────────────
+    // Dùng @Lazy để tránh circular dependency
+    @org.springframework.beans.factory.annotation.Autowired
+    @Lazy
+    private BookingStatusLogService bookingStatusLogService;
+
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO req) {
 
         Vehicle vehicle = vehicleRepository.findById(req.getVehicleId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay xe id=" + req.getVehicleId()));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay xe id=" + req.getVehicleId()));
 
         Garage garage = garageRepository.findById(req.getGarageId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay garage id=" + req.getGarageId()));
-
-        RepairService service = repairServiceRepository.findById(req.getServiceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay dich vu id=" + req.getServiceId()));
-
-        if (!garageServiceLinkRepository.existsByGarage_IdAndService_Id(garage.getId(), service.getId())) {
-            throw new BusinessException("Garage nay khong ho tro dich vu \"" + service.getName() + "\"");
-        }
+                .orElseThrow(() -> new RuntimeException("Khong tim thay garage id=" + req.getGarageId()));
 
         BookingSlot slot = bookingSlotRepository.findById(req.getSlotId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay khung gio id=" + req.getSlotId()));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay khung gio id=" + req.getSlotId()));
 
         if (!slot.getGarage().getId().equals(garage.getId())) {
-            throw new BusinessException("Khung gio khong thuoc garage da chon");
+            throw new RuntimeException("Khung gio khong thuoc garage da chon");
         }
         if (slot.getStatus() != BookingSlot.SlotStatus.AVAILABLE) {
-            throw new BusinessException("Khung gio nay da duoc dat, vui long chon khung gio khac");
+            throw new RuntimeException("Khung gio nay da duoc dat, vui long chon khung gio khac");
         }
 
         Booking.BookingType type;
         try {
             type = Booking.BookingType.valueOf(req.getBookingType());
         } catch (IllegalArgumentException ex) {
-            throw new BusinessException("bookingType khong hop le (GARAGE hoac HOME)");
+            throw new RuntimeException("bookingType khong hop le (GARAGE hoac HOME)");
         }
 
         if (type == Booking.BookingType.HOME
                 && (req.getServiceAddress() == null || req.getServiceAddress().isBlank())) {
-            throw new BusinessException("Vui long chon dia chi sua chua tan noi");
+            throw new RuntimeException("Vui long chon dia chi sua chua tan noi");
         }
 
-        // Giu cho slot
+        List<RepairService> chosenServices = req.getServiceIds().stream()
+                .map(serviceId -> {
+                    RepairService s = repairServiceRepository.findById(serviceId)
+                            .orElseThrow(() -> new RuntimeException("Khong tim thay dich vu id=" + serviceId));
+                    if (!garageServiceLinkRepository.existsByGarage_IdAndService_Id(garage.getId(), serviceId)) {
+                        throw new RuntimeException("Garage nay khong ho tro dich vu \"" + s.getName() + "\"");
+                    }
+                    return s;
+                })
+                .toList();
+
         slot.setStatus(BookingSlot.SlotStatus.BOOKED);
         bookingSlotRepository.save(slot);
 
         Booking booking = Booking.builder()
                 .vehicle(vehicle)
                 .garage(garage)
-                .service(service)
                 .slot(slot)
                 .bookingType(type)
                 .serviceAddress(type == Booking.BookingType.HOME ? req.getServiceAddress() : null)
                 .latitude(type == Booking.BookingType.HOME ? req.getLatitude() : null)
                 .longitude(type == Booking.BookingType.HOME ? req.getLongitude() : null)
-                .status(Booking.BookingStatus.CONFIRMED)
+                .status(Booking.BookingStatus.PENDING)
                 .build();
-
         booking = bookingRepository.save(booking);
+
+        for (RepairService s : chosenServices) {
+            BookingItem item = BookingItem.builder()
+                    .booking(booking)
+                    .service(s)
+                    .price(s.getPrice())
+                    .build();
+            bookingItemRepository.save(item);
+        }
+
+        // ── TV3: Ghi log PENDING sau khi tạo booking ─────────────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    booking.getId(),
+                    null,          // oldStatus = null vì đây là bước đầu tiên
+                    "PENDING",
+                    "Khách hàng đã đặt lịch",
+                    null
+            );
+        } catch (Exception ignored) {
+            // Không để lỗi log phá vỡ luồng tạo booking
+        }
+
+        return toDto(booking);
+    }
+
+    // ── TV4: Thợ xác nhận hoặc huỷ booking ───────────────────────────────────
+    @Transactional
+    public BookingResponseDTO confirmBooking(Integer bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn #" + bookingId));
+
+        if (booking.getStatus() != Booking.BookingStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể xác nhận lịch hẹn đang chờ xác nhận");
+        }
+
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+
+        // ── TV3: Ghi log CONFIRMED + gửi thông báo cho khách ─────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    bookingId,
+                    null,
+                    "CONFIRMED",
+                    "Thợ đã xác nhận lịch hẹn",
+                    null  // Service tự lấy userId từ booking.vehicle.user
+            );
+        } catch (Exception ignored) {}
+
+        return toDto(booking);
+    }
+
+    @Transactional
+    public BookingResponseDTO cancelBooking(Integer bookingId, String reason) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn #" + bookingId));
+
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED) {
+            throw new RuntimeException("Không thể huỷ lịch hẹn đã hoàn thành");
+        }
+
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+
+        // ── TV3: Ghi log CANCELLED + gửi thông báo cho khách ─────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    bookingId,
+                    null,
+                    "CANCELLED",
+                    reason != null ? reason : "Lịch hẹn đã bị huỷ",
+                    null
+            );
+        } catch (Exception ignored) {}
 
         return toDto(booking);
     }
@@ -94,7 +175,7 @@ public class BookingService {
     @Transactional(readOnly = true)
     public BookingResponseDTO getBooking(Integer bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay lich hen id=" + bookingId));
+                .orElseThrow(() -> new RuntimeException("Khong tim thay lich hen id=" + bookingId));
         return toDto(booking);
     }
 
@@ -104,7 +185,54 @@ public class BookingService {
                 .stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<BookingResponseDTO> getMyBookings() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new RuntimeException("Bạn chưa đăng nhập hoặc Token không hợp lệ");
+        }
+
+        User currentUser = userRepository.findByEmailOrPhone(auth.getName(), auth.getName())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        List<Booking> bookings = bookingRepository.findByVehicle_UserIdOrderByCreatedAtDesc(currentUser.getId());
+
+        // ── SỬA ĐỔI CHÍNH TẠI ĐÂY: Duyệt qua danh sách để ép trạng thái hiển thị theo bảng Log mới nhất ──
+        for (Booking booking : bookings) {
+            bookingStatusLogRepository.findTopByBooking_IdOrderByChangedAtDesc(booking.getId())
+                    .ifPresent(latestLog -> {
+                        String latestStatusStr = latestLog.getNewStatus();
+                        if (latestStatusStr != null) {
+                            try {
+                                Booking.BookingStatus mappedStatus = Booking.BookingStatus.valueOf(latestStatusStr.toUpperCase());
+                                booking.setStatus(mappedStatus);
+                            } catch (IllegalArgumentException ignored) {
+                                // Bỏ qua nếu chuỗi log không map được với Enum
+                            }
+                        }
+                    });
+        }
+
+        return bookings.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     private BookingResponseDTO toDto(Booking b) {
+        List<BookingItem> items = bookingItemRepository.findByBooking_Id(b.getId());
+
+        List<BookingItemDTO> itemDtos = items.stream()
+                .map(i -> BookingItemDTO.builder()
+                        .serviceId(i.getService().getId())
+                        .serviceName(i.getService().getName())
+                        .price(i.getPrice())
+                        .build())
+                .toList();
+
+        BigDecimal total = itemDtos.stream()
+                .map(BookingItemDTO::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         String garageAddress = b.getBookingType() == Booking.BookingType.HOME
                 ? b.getServiceAddress()
                 : b.getGarage().getAddress();
@@ -114,8 +242,8 @@ public class BookingService {
                 .bookingCode(generateBookingCode(b))
                 .bookingType(b.getBookingType().name())
                 .status(b.getStatus().name())
-                .serviceName(b.getService().getName())
-                .servicePrice(b.getService().getPrice())
+                .items(itemDtos)
+                .garageId(b.getGarage().getId())        // MỚI
                 .garageName(b.getGarage().getName())
                 .garageAddress(b.getGarage().getAddress())
                 .vehicleInfo(b.getVehicle().getBrand() + " " + b.getVehicle().getModel()
@@ -126,12 +254,11 @@ public class BookingService {
                 .displayAddress(garageAddress)
                 .latitude(b.getLatitude())
                 .longitude(b.getLongitude())
-                .totalAmount(b.getService().getPrice())
+                .totalAmount(total)
                 .createdAt(b.getCreatedAt())
                 .build();
     }
 
-    /** Sinh ma dat lich dang #DL2406289 (DL + ddMMyy + id), giong mockup man hinh 7. */
     private String generateBookingCode(Booking b) {
         String datePart = b.getCreatedAt() != null
                 ? b.getCreatedAt().format(DateTimeFormatter.ofPattern("ddMMyy"))
@@ -139,4 +266,3 @@ public class BookingService {
         return "DL" + datePart + b.getId();
     }
 }
-

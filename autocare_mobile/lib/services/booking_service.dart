@@ -4,9 +4,6 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../storage/token_storage.dart';
 
-/// Goi cac API cho luong "Dat lich sua chua" (7 man hinh trong mockup).
-/// Viet theo dung phong cach VehicleService: tra ve Map/List<Map> tho,
-/// khong bao trong wrapper, loi thi doc data['message'].
 class BookingService {
   Future<Map<String, String>> _headers() async {
     final token = await TokenStorage.getToken();
@@ -16,15 +13,13 @@ class BookingService {
     };
   }
 
-  /// Man hinh 2: danh sach dich vu. homeOnly=true cho tab "Sua tan noi".
+  /// Man hinh 2: danh sach dich vu de tick chon NHIEU dich vu, KEM GIA.
   Future<List<Map<String, dynamic>>> getServices({required bool homeOnly}) async {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}/api/services?homeOnly=$homeOnly'),
       headers: await _headers(),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(data);
     } else {
@@ -32,25 +27,22 @@ class BookingService {
     }
   }
 
-  /// Man hinh 3: danh sach garage ho tro dich vu da chon, sap xep gan -> xa.
+  /// Man hinh 3: danh sach garage ho tro DU TAT CA cac dich vu da chon.
   Future<List<Map<String, dynamic>>> getGarages({
-    int? serviceId,
+    required List<int> serviceIds,
     double? lat,
     double? lng,
   }) async {
-    final params = <String>[];
-    if (serviceId != null) params.add('serviceId=$serviceId');
+    final params = <String>['serviceIds=${serviceIds.join(',')}'];
     if (lat != null) params.add('lat=$lat');
     if (lng != null) params.add('lng=$lng');
-    final query = params.isNotEmpty ? '?${params.join('&')}' : '';
+    final query = '?${params.join('&')}';
 
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}/api/garages$query'),
       headers: await _headers(),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(data);
     } else {
@@ -58,18 +50,15 @@ class BookingService {
     }
   }
 
-  /// Man hinh 4: khung gio trong ngay cua 1 garage.
   Future<List<Map<String, dynamic>>> getSlots({
     required int garageId,
-    required String date, // dang yyyy-MM-dd
+    required String date,
   }) async {
     final response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}/api/garages/$garageId/slots?date=$date'),
       headers: await _headers(),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(data);
     } else {
@@ -77,13 +66,12 @@ class BookingService {
     }
   }
 
-  /// Man hinh 6 -> 7: tao lich hen.
   Future<Map<String, dynamic>> createBooking({
     required int vehicleId,
     required int garageId,
-    required int serviceId,
+    required List<int> serviceIds,
     required int slotId,
-    required String bookingType, // GARAGE hoac HOME
+    required String bookingType,
     String? serviceAddress,
     double? latitude,
     double? longitude,
@@ -94,7 +82,7 @@ class BookingService {
       body: jsonEncode({
         'vehicleId': vehicleId,
         'garageId': garageId,
-        'serviceId': serviceId,
+        'serviceIds': serviceIds,
         'slotId': slotId,
         'bookingType': bookingType,
         if (serviceAddress != null) 'serviceAddress': serviceAddress,
@@ -102,9 +90,7 @@ class BookingService {
         if (longitude != null) 'longitude': longitude,
       }),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200 || response.statusCode == 201) {
       return data;
     } else {
@@ -117,9 +103,7 @@ class BookingService {
       Uri.parse('${ApiConstants.baseUrl}/api/bookings/$id'),
       headers: await _headers(),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200) {
       return data;
     } else {
@@ -132,9 +116,7 @@ class BookingService {
       Uri.parse('${ApiConstants.baseUrl}/api/bookings/user/$userId'),
       headers: await _headers(),
     );
-
     final data = jsonDecode(utf8.decode(response.bodyBytes));
-
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(data);
     } else {

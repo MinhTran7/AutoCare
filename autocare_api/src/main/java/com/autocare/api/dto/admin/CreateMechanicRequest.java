@@ -68,4 +68,5 @@ public class CreateMechanicRequest {
     public void setGarageId(Integer garageId) {
         this.garageId = garageId;
     }
+
 }

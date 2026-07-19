@@ -16,6 +16,7 @@ import 'screens/garage/vehicle_detail_screen.dart';
 import 'screens/garage/edit_vehicle_screen.dart';
 
 import 'screens/mechanic/mechanic_home_screen.dart';
+import 'screens/mechanic/attendance_screen.dart';
 
 import 'screens/admin/admin_home_screen.dart';
 import 'screens/admin/create_mechanic_screen.dart';
@@ -57,6 +58,7 @@ class AutoCareApp extends StatelessWidget {
         '/edit-vehicle': (context) => const EditVehicleScreen(),
 
         '/mechanic-home': (context) => const MechanicHomeScreen(),
+        '/attendance': (context) => const AttendanceScreen(),
 
         '/admin-home': (context) => const AdminHomeScreen(),
         '/admin-mechanics': (context) => const ManageMechanicsScreen(),
@@ -84,6 +86,7 @@ class AutoCareApp extends StatelessWidget {
             bookingId: args['bookingId'],
             garageId: args['garageId'],
             garageName: args['garageName'],
+            status: args['status'], // <--- THÊM DÒNG NÀY VÀO ĐỂ TRUYỀN STATUS
           );
         },
       },
