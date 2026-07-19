@@ -14,22 +14,27 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
   List<Map<String, dynamic>> _timeline = [];
   bool _isLoading = true;
 
-  // 🛠️ Rút gọn chỉ còn 3 bước chính cho Timeline bình thường
-  final List<String> _steps = ['PENDING', 'CONFIRMED', 'COMPLETED'];
+  // 🛠️ Đủ 5 bước tuyến tính theo trạng thái nhóm đã thống nhất
+  // (CANCELLED là trạng thái kết thúc riêng, không nằm trong chuỗi này —
+  // vẫn được ẩn ở dưới bằng if (!_isCancelled) như cũ).
+  final List<String> _steps = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'WAITING_PAYMENT', 'COMPLETED'];
 
-  // 🛠️ Cấu hình lại nhãn hiển thị trực quan theo yêu cầu của bạn
+  // 🛠️ Thêm nhãn cho WAITING_PAYMENT (trước đây bị thiếu hoàn toàn)
   final Map<String, String> _stepLabel = {
     'PENDING': 'Chờ xác nhận',
     'CONFIRMED': 'Đã xác nhận',
-    'IN_PROGRESS': 'Đang sửa chữa', // Giữ map text cho phần Lịch sử hoạt động nếu có log cũ
+    'IN_PROGRESS': 'Đang sửa chữa',
+    'WAITING_PAYMENT': 'Chờ thanh toán',
     'COMPLETED': 'Hoàn thành',
     'CANCELLED': 'Từ chối / Đã huỷ',
   };
 
+  // 🛠️ Thêm icon cho WAITING_PAYMENT
   final Map<String, IconData> _stepIcon = {
     'PENDING': Icons.access_time,
     'CONFIRMED': Icons.check_circle_outline,
     'IN_PROGRESS': Icons.build,
+    'WAITING_PAYMENT': Icons.payments_outlined,
     'COMPLETED': Icons.verified,
     'CANCELLED': Icons.cancel,
   };
@@ -122,13 +127,14 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
                         final index = entry.key;
                         final step = entry.value;
 
-                        // Xử lý logic hiển thị các bước tích xanh dựa trên trạng thái thực tế
+                        // 🛠️ IN_PROGRESS và WAITING_PAYMENT giờ là bước thật
+                        // trong _steps, nên không cần hack effectiveCurrentIndex
+                        // để "giả lập" IN_PROGRESS bằng vị trí của CONFIRMED nữa —
+                        // dùng thẳng vị trí thực của _currentStatus trong _steps.
                         final currentIndex = _steps.indexOf(_currentStatus);
-                        // Nếu đang ở trạng thái phụ như IN_PROGRESS, coi như bước CONFIRMED đã xong
-                        final effectiveCurrentIndex = _currentStatus == 'IN_PROGRESS' ? 1 : currentIndex;
 
-                        final isDone = index <= effectiveCurrentIndex;
-                        final isActive = step == _currentStatus || (step == 'CONFIRMED' && _currentStatus == 'IN_PROGRESS');
+                        final isDone = index <= currentIndex;
+                        final isActive = step == _currentStatus;
                         final isLast = index == _steps.length - 1;
 
                         return Row(
@@ -151,7 +157,7 @@ class _BookingTrackingScreenState extends State<BookingTrackingScreen> {
                                   Container(
                                     width: 2,
                                     height: 36,
-                                    color: index < effectiveCurrentIndex
+                                    color: index < currentIndex
                                         ? Theme.of(context).colorScheme.primary
                                         : Colors.grey.shade300,
                                   ),

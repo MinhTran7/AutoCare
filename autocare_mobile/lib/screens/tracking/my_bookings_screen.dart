@@ -152,7 +152,7 @@ class _BookingTicketCard extends StatelessWidget {
 
   final Map<String, dynamic> booking;
 
-  static const _statusOrder = ['PENDING', 'CONFIRMED', 'COMPLETED'];
+  static const _statusOrder = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'WAITING_PAYMENT', 'COMPLETED'];
 
   @override
   Widget build(BuildContext context) {
@@ -347,6 +347,8 @@ class _StatusChip extends StatelessWidget {
 
   static const _labels = {
     'COMPLETED': 'Hoàn thành',
+    'IN_PROGRESS': 'Đang sửa chữa',
+    'WAITING_PAYMENT': 'Chờ thanh toán',
     'CONFIRMED': 'Đã xác nhận',
     'PENDING': 'Chờ xử lý',
     'CANCELLED': 'Đã huỷ',
@@ -354,6 +356,8 @@ class _StatusChip extends StatelessWidget {
 
   static const _colors = {
     'COMPLETED': Color(0xFF2E7D5B),
+    'IN_PROGRESS': Color(0xFF7C3AED),
+    'WAITING_PAYMENT': Color(0xFF0D9488),
     'CONFIRMED': Color(0xFF2563EB),
     'PENDING': Color(0xFFB8720A),
     'CANCELLED': Color(0xFFB3261E),
@@ -393,6 +397,8 @@ class _ProgressStepper extends StatelessWidget {
   static const _stepLabels = {
     'PENDING': 'Đặt lịch',
     'CONFIRMED': 'Xác nhận',
+    'IN_PROGRESS': 'Đang sửa',
+    'WAITING_PAYMENT': 'Thanh toán',
     'COMPLETED': 'Hoàn thành',
   };
 
@@ -402,11 +408,15 @@ class _ProgressStepper extends StatelessWidget {
     final activeIndex = currentIndex == -1 ? 0 : currentIndex;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: List.generate(steps.length * 2 - 1, (i) {
         if (i.isOdd) {
           final leftStepDone = (i ~/ 2) < activeIndex;
           return Expanded(
-            child: Container(height: 2, color: leftStepDone ? _Palette.accent : _Palette.divider),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 7),
+              child: Container(height: 2, color: leftStepDone ? _Palette.accent : _Palette.divider),
+            ),
           );
         }
         final stepIndex = i ~/ 2;
@@ -428,12 +438,18 @@ class _ProgressStepper extends StatelessWidget {
                   : (active ? Center(child: Container(width: 6, height: 6, decoration: const BoxDecoration(color: _Palette.accent, shape: BoxShape.circle))) : null),
             ),
             const SizedBox(height: 4),
-            Text(
-              _stepLabels[steps[stepIndex]] ?? steps[stepIndex],
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: (done || active) ? _Palette.ink : _Palette.inkSoft,
+            SizedBox(
+              width: 48,
+              child: Text(
+                _stepLabels[steps[stepIndex]] ?? steps[stepIndex],
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  height: 1.15,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: (done || active) ? _Palette.ink : _Palette.inkSoft,
+                ),
               ),
             ),
           ],
