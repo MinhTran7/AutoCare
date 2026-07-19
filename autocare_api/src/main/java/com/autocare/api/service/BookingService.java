@@ -8,6 +8,7 @@ import com.autocare.api.dto.response.BookingResponseDTO;
 import com.autocare.api.entity.*;
 import com.autocare.api.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.autocare.api.dto.service.BookingItemDTO;
@@ -26,8 +27,15 @@ public class BookingService {
     private final GarageRepository garageRepository;
     private final RepairServiceRepository repairServiceRepository;
     private final GarageServiceLinkRepository garageServiceLinkRepository;
-    // THÊM:UserRepository để tìm thông tin khách hàng từ token đăng nhập
     private final UserRepository userRepository;
+    // ── Thêm repository của bảng log vào Constructor (Lombok tự sinh tự động nhờ @RequiredArgsConstructor) ──
+    private final BookingStatusLogRepository bookingStatusLogRepository;
+
+    // ── TV3: inject BookingStatusLogService để ghi log ───────────────────────
+    // Dùng @Lazy để tránh circular dependency
+    @org.springframework.beans.factory.annotation.Autowired
+    @Lazy
+    private BookingStatusLogService bookingStatusLogService;
 
     @Transactional
     public BookingResponseDTO createBooking(BookingRequestDTO req) {
@@ -95,6 +103,72 @@ public class BookingService {
             bookingItemRepository.save(item);
         }
 
+        // ── TV3: Ghi log PENDING sau khi tạo booking ─────────────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    booking.getId(),
+                    null,          // oldStatus = null vì đây là bước đầu tiên
+                    "PENDING",
+                    "Khách hàng đã đặt lịch",
+                    null
+            );
+        } catch (Exception ignored) {
+            // Không để lỗi log phá vỡ luồng tạo booking
+        }
+
+        return toDto(booking);
+    }
+
+    // ── TV4: Thợ xác nhận hoặc huỷ booking ───────────────────────────────────
+    @Transactional
+    public BookingResponseDTO confirmBooking(Integer bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn #" + bookingId));
+
+        if (booking.getStatus() != Booking.BookingStatus.PENDING) {
+            throw new RuntimeException("Chỉ có thể xác nhận lịch hẹn đang chờ xác nhận");
+        }
+
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+
+        // ── TV3: Ghi log CONFIRMED + gửi thông báo cho khách ─────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    bookingId,
+                    null,
+                    "CONFIRMED",
+                    "Thợ đã xác nhận lịch hẹn",
+                    null  // Service tự lấy userId từ booking.vehicle.user
+            );
+        } catch (Exception ignored) {}
+
+        return toDto(booking);
+    }
+
+    @Transactional
+    public BookingResponseDTO cancelBooking(Integer bookingId, String reason) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn #" + bookingId));
+
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED) {
+            throw new RuntimeException("Không thể huỷ lịch hẹn đã hoàn thành");
+        }
+
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+
+        // ── TV3: Ghi log CANCELLED + gửi thông báo cho khách ─────────────────
+        try {
+            bookingStatusLogService.logStatusChange(
+                    bookingId,
+                    null,
+                    "CANCELLED",
+                    reason != null ? reason : "Lịch hẹn đã bị huỷ",
+                    null
+            );
+        } catch (Exception ignored) {}
+
         return toDto(booking);
     }
 
@@ -111,7 +185,6 @@ public class BookingService {
                 .stream().map(this::toDto).toList();
     }
 
-    // THÊM: Logic xử lý lấy lịch hẹn tự động theo Token cho tính năng của TV3
     @Transactional(readOnly = true)
     public List<BookingResponseDTO> getMyBookings() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -124,7 +197,22 @@ public class BookingService {
 
         List<Booking> bookings = bookingRepository.findByVehicle_UserIdOrderByCreatedAtDesc(currentUser.getId());
 
-        // Sử dụng hàm toDto có sẵn ở dưới để dọn sạch lỗi constructor
+        // ── SỬA ĐỔI CHÍNH TẠI ĐÂY: Duyệt qua danh sách để ép trạng thái hiển thị theo bảng Log mới nhất ──
+        for (Booking booking : bookings) {
+            bookingStatusLogRepository.findTopByBooking_IdOrderByChangedAtDesc(booking.getId())
+                    .ifPresent(latestLog -> {
+                        String latestStatusStr = latestLog.getNewStatus();
+                        if (latestStatusStr != null) {
+                            try {
+                                Booking.BookingStatus mappedStatus = Booking.BookingStatus.valueOf(latestStatusStr.toUpperCase());
+                                booking.setStatus(mappedStatus);
+                            } catch (IllegalArgumentException ignored) {
+                                // Bỏ qua nếu chuỗi log không map được với Enum
+                            }
+                        }
+                    });
+        }
+
         return bookings.stream()
                 .map(this::toDto)
                 .toList();
@@ -155,6 +243,7 @@ public class BookingService {
                 .bookingType(b.getBookingType().name())
                 .status(b.getStatus().name())
                 .items(itemDtos)
+                .garageId(b.getGarage().getId())        // MỚI
                 .garageName(b.getGarage().getName())
                 .garageAddress(b.getGarage().getAddress())
                 .vehicleInfo(b.getVehicle().getBrand() + " " + b.getVehicle().getModel()
@@ -176,5 +265,4 @@ public class BookingService {
                 : "000000";
         return "DL" + datePart + b.getId();
     }
-
 }

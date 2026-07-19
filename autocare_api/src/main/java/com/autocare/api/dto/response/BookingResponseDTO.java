@@ -14,6 +14,7 @@ public class BookingResponseDTO {
     private String bookingType;
     private String status;
     private List<BookingItemDTO> items;
+    private Integer garageId;        // MỚI
     private String garageName;
     private String garageAddress;
     private String vehicleInfo;

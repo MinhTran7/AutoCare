@@ -14,13 +14,13 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
     boolean existsByBooking_Id(Integer bookingId);
 
-    // FIX: thêm JOIN FETCH để load sẵn booking + booking.service,
-    // tránh LazyInitializationException khi ReviewResponse truy cập booking.getService()
+    // FIX: đổi JOIN FETCH -> LEFT JOIN FETCH để không loại bỏ review
+    // của những booking chưa có (hoặc thiếu) booking_items tương ứng.
     @Query("""
         SELECT DISTINCT r FROM Review r
         JOIN FETCH r.booking b
-        JOIN FETCH b.bookingItems bi
-        JOIN FETCH bi.service
+        LEFT JOIN FETCH b.bookingItems bi
+        LEFT JOIN FETCH bi.service
         WHERE r.garage.id = :garageId AND r.isVisible = true
         ORDER BY r.createdAt DESC
         """)
