@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateEmailOrPhone(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Vui lòng nhập email hoặc số điện thoại';
+      return 'Vui lòng nhập email ';
     }
 
     final input = value.trim().toLowerCase();
@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isValidPhone = phoneRegex.hasMatch(input);
 
     if (!isValidGmail && !isValidPhone) {
-      return 'Email phải là Gmail hoặc số điện thoại phải gồm đúng 10 số';
+      return 'Email phải là Gmail ';
     }
 
     return null;

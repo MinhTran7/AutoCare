@@ -69,6 +69,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Hàm gọi API lấy danh sách lịch hẹn của User
+  Future<List<Map<String, dynamic>>> _fetchMyBookings() async {
+    final token = await TokenStorage.getToken();
+    if (token == null) throw Exception('Chưa đăng nhập');
+
+    final response = await http.get(
+      Uri.parse(
+        'https://autocare-api-5a1r.onrender.com/api/bookings/my-bookings',
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(utf8.decode(response.bodyBytes));
+      return List<Map<String, dynamic>>.from(data);
+    }
+    throw Exception('Lỗi server: ${response.statusCode}');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
