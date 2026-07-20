@@ -81,7 +81,7 @@ public class InvoiceService {
 
         // Sinh invoice_code đúng định dạng INV-YYYYMMDD-{id}
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        saved.setInvoiceCode(String.format("INV-%s-%04d", date, saved.getId()));
+        saved.setInvoiceCode("INV-" + date + "-" + saved.getId());
 
         return invoiceRepository.save(saved);
     }

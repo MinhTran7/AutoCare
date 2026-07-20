@@ -37,7 +37,9 @@ public class CreateMechanicRequest {
         return avatarUrl;
     }
 
-    public Integer getGarageId() { return garageId; }
+    public Integer getGarageId() {
+        return garageId;
+    }
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
@@ -63,5 +65,8 @@ public class CreateMechanicRequest {
         this.avatarUrl = avatarUrl;
     }
 
-    public void setGarageId(Integer garageId) { this.garageId = garageId; }
+    public void setGarageId(Integer garageId) {
+        this.garageId = garageId;
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.autocare.api.controller;
 
+import com.autocare.api.dto.mechanic.AddSparePartRequest;
 import com.autocare.api.entity.Booking;
 import com.autocare.api.entity.Invoice;
 import com.autocare.api.entity.Mechanic;
@@ -127,6 +128,30 @@ public class MechanicController {
         }
     }
 
+    @PostMapping("/bookings/{bookingId}/parts")
+    public ResponseEntity<?> addPart(
+            @PathVariable Integer bookingId,
+            @RequestBody AddSparePartRequest request,
+            @RequestAttribute("userId") Integer userId){
+
+        try{
+
+            mechanicService.addSparePart(
+                    bookingId,
+                    request.getSparePartId(),
+                    request.getQuantity(),
+                    userId);
+
+            return ResponseEntity.ok("Added");
+
+        }catch(RuntimeException e){
+
+            return ResponseEntity.badRequest().body(e.getMessage());
+
+        }
+
+    }
+
     @PutMapping("/bookings/{bookingId}/reject")
     public ResponseEntity<?> rejectBooking(
             @PathVariable Integer bookingId,
@@ -167,6 +192,23 @@ public class MechanicController {
         } catch (RuntimeException e) {
 
             return ResponseEntity.badRequest().body(e.getMessage());
+
+        }
+    }
+
+    @GetMapping("/bookings/dashboard")
+    public ResponseEntity<?> getDashboardBookings(
+            @RequestAttribute("userId") Integer userId) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    mechanicService.getDashboardBookings(userId));
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
 
         }
     }

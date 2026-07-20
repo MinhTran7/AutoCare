@@ -1,8 +1,10 @@
 package com.autocare.api.dto.response;
 
 import com.autocare.api.entity.Review;
-import com.autocare.api.entity.Booking;
+
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ReviewResponse {
 
@@ -10,8 +12,7 @@ public class ReviewResponse {
     private Integer bookingId;
     private Integer userId;
     private Integer garageId;
-    private Integer serviceId;      // MỚI
-    private String serviceName;     // MỚI
+    private List<String> serviceNames;   // MỚI: danh sách tên dịch vụ trong booking này
     private Integer rating;
     private String comment;
     private String images;
@@ -34,15 +35,14 @@ public class ReviewResponse {
         this.createdAt = review.getCreatedAt();
         this.updatedAt = review.getUpdatedAt();
 
-        // MỚI: lấy serviceId/serviceName qua booking -> service
-        if (review.getBooking() != null &&
-                review.getBooking().getBookingItems() != null &&
-                !review.getBooking().getBookingItems().isEmpty()) {
-
-            // Lấy dịch vụ đầu tiên trong danh sách (giả định 1 booking = 1 service)
-            var firstItem = review.getBooking().getBookingItems().get(0);
-            this.serviceId = firstItem.getService().getId();
-            this.serviceName = firstItem.getService().getName();
+        // MỚI: lấy danh sách tên dịch vụ qua booking -> bookingItems -> service
+        if (review.getBooking() != null && review.getBooking().getBookingItems() != null) {
+            this.serviceNames = review.getBooking().getBookingItems().stream()
+                    .filter(bi -> bi.getService() != null)
+                    .map(bi -> bi.getService().getName())
+                    .collect(Collectors.toList());
+        } else {
+            this.serviceNames = List.of();
         }
     }
 
@@ -58,11 +58,8 @@ public class ReviewResponse {
     public Integer getGarageId() { return garageId; }
     public void setGarageId(Integer garageId) { this.garageId = garageId; }
 
-    public Integer getServiceId() { return serviceId; }
-    public void setServiceId(Integer serviceId) { this.serviceId = serviceId; }
-
-    public String getServiceName() { return serviceName; }
-    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+    public List<String> getServiceNames() { return serviceNames; }
+    public void setServiceNames(List<String> serviceNames) { this.serviceNames = serviceNames; }
 
     public Integer getRating() { return rating; }
     public void setRating(Integer rating) { this.rating = rating; }

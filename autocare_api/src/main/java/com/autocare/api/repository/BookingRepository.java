@@ -9,8 +9,16 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Repository
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
-    List<Booking> findByVehicle_UserIdOrderByCreatedAtDesc(Integer userId);
+
+    @Query("""
+           SELECT b 
+           FROM Booking b
+           WHERE b.vehicle.user.id = :userId
+           ORDER BY b.createdAt DESC
+           """)
+    List<Booking> findByVehicle_UserIdOrderByCreatedAtDesc(@Param("userId") Integer userId);
 
     long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 
@@ -55,6 +63,22 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
            """)
     List<Booking> findRepairingBookings(
             @Param("mechanicId") Integer mechanicId);
+
+    @Query("""
+               SELECT b
+               FROM Booking b
+               WHERE
+                   (
+                     b.garage.id = :garageId
+                     AND b.status='PENDING'
+                   )
+               OR
+                   (
+                     b.mechanic.id=:mechanicId
+                   )
+               ORDER BY b.createdAt DESC
+           """)
+    List<Booking> findMechanicDashboard(Integer garageId, Integer mechanicId);
 
     List<Booking> findByMechanic_IdOrderByCreatedAtDesc(Integer mechanicId);
 

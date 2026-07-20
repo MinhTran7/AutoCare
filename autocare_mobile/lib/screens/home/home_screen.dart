@@ -6,6 +6,8 @@ import '../../storage/token_storage.dart';
 import '../../services/vehicle_service.dart';
 import '../booking/repair_type_screen.dart';
 import '../booking/select_vehicle_for_booking_screen.dart';
+// Nhớ kiểm tra lại đường dẫn import này cho đúng với cấu trúc thư mục của bạn:
+import '../tracking/my_bookings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,11 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
-  
-  /// Bam nut "Dat lich sua chua xe":
-  /// - Chua co xe nao -> bao them xe truoc.
-  /// - Co dung 1 xe -> vao thang man hinh chon hinh thuc sua chua.
-  /// - Co tu 2 xe tro len -> qua man hinh chon xe truoc.
+
+  /// Bấm nút "Đặt lịch sửa chữa xe":
+  /// - Chưa có xe nào -> báo thêm xe trước.
+  /// - Có đúng 1 xe -> vào thẳng màn hình chọn hình thức sửa chữa.
+  /// - Có từ 2 xe trở lên -> qua màn hình chọn xe trước.
   Future<void> _goToBooking(BuildContext context) async {
     setState(() => _checkingVehicles = true);
     try {
@@ -95,17 +97,14 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('AutoCare Home'),
         actions: [
-          // Thay thế nút thông báo tĩnh bằng bộ gọi API động này:
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () async {
-              // 1. Gọi service lấy thông báo động từ DB lên
               final notificationService = NotificationService();
               final dynamicNotifications = await notificationService.getAll();
 
               if (!context.mounted) return;
 
-              // 2. Hiển thị Popup
               showDialog(
                 context: context,
                 builder: (ctx) => Dialog(
@@ -144,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final bId = n['bookingId'];
                                   if (bId == null) return;
 
-                                  // Tự động điều hướng động theo loại thông báo trong DB
                                   if (n['type'] == 'invoice_ready') {
                                     Navigator.pushNamed(context, '/invoice', arguments: {'bookingId': bId});
                                   } else {
@@ -184,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // TV1 giữ nguyên
+              // 1. Hồ sơ cá nhân
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -194,6 +192,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+
+              // 2. Garage của tôi
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -204,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
 
+              // 3. Đặt lịch sửa chữa xe
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -218,123 +219,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: const Text('Đặt lịch sửa chữa xe'),
                 ),
               ),
+              const SizedBox(height: 12),
 
-              const SizedBox(height: 24),
-              const Divider(),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.assignment, color: Colors.blue.shade700),
-                    const SizedBox(width: 8),
-                    const Text('Lịch hẹn của bạn (TV3)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-
-              // Gọi bộ dựng tự động dựa vào trạng thái API
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: _fetchMyBookings(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
-                    ));
-                  }
-
-                  if (snapshot.hasError) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      color: Colors.red.shade50,
-                      child: const Text(
-                        'Không thể tải lịch hẹn. Vui lòng kiểm tra kết nối Backend hoặc đăng nhập lại.',
-                        style: TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center,
-                      ),
+              // 4. Xem lịch hẹn của bạn (Nút mới thêm - Thực hiện chuyển trang)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyBookingsScreen()),
                     );
-                  }
-
-                  final bookings = snapshot.data ?? [];
-                  if (bookings.isEmpty) {
-                    return const Text('Bạn chưa có lịch đặt sửa xe nào.', style: TextStyle(color: Colors.grey));
-                  }
-
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: bookings.length,
-                    itemBuilder: (context, index) {
-                      final booking = bookings[index];
-                      final bId = booking['id'];
-                      final status = booking['status'] ?? 'PENDING';
-                      final serviceName = booking['serviceName'] ?? 'Dịch vụ';
-                      final garageName = booking['garageName'] ?? 'Garage AutoCare';
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Mã đơn: #$bId', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('Dịch vụ: $serviceName tại $garageName'),
-                              Text('Trạng thái: $status', style: const TextStyle(color: Colors.blue)),
-                              const Divider(),
-                              Row(
-                                children: [
-                                  // 1. Nút Tiến trình (Luôn hiện)
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () => Navigator.pushNamed(context, '/booking-tracking', arguments: {'bookingId': bId}),
-                                      child: const Text('Tiến trình'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-
-                                  // 2. Nút Hoá đơn (Luôn hiện)
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () => Navigator.pushNamed(context, '/invoice', arguments: {'bookingId': bId}),
-                                      child: const Text('Hoá đơn'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8), // Khoảng cách giữa 2 hàng nút
-                              Row(
-                                children: [
-                                  // Nút Xem review & Đánh giá chung (LUÔN HIỆN)
-                                  // Thay thế đoạn Expanded hiện tại trong HomeScreen của bạn bằng:
-                                  // Tìm đến đoạn nút Đánh giá trong HomeScreen.dart và sửa lại:
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.rate_review, size: 16),
-                                      label: const Text('Đánh giá'),
-                                      onPressed: () {
-                                        // Sửa '/review-page' thành '/review'
-                                        Navigator.pushNamed(context, '/review', arguments: {
-                                          'bookingId': bId,
-                                          'serviceId': booking['serviceId'],
-                                          'garageId': booking['garageId'] ?? 1,
-                                          'garageName': garageName, // Đảm bảo truyền đủ tham số này
-                                          'status': status,
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+                  },
+                  icon: const Icon(Icons.assignment),
+                  label: const Text('Xem lịch hẹn của bạn'),
+                ),
               ),
             ],
           ),

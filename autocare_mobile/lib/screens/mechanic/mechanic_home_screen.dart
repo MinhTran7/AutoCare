@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/mechanic_api_service.dart';
-import '../../storage/token_storage.dart'; // Đảm bảo import đúng đường dẫn lưu trữ token
+import '../../storage/token_storage.dart';
+import 'AddPartScreen.dart'; // Đảm bảo import đúng đường dẫn lưu trữ token
 
 class MechanicHomeScreen extends StatefulWidget {
   const MechanicHomeScreen({super.key});
@@ -24,7 +25,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
     try {
-      final bookings = await _apiService.getWaitingBookings();
+      final bookings = await _apiService.getDashboardBookings();
       setState(() {
         _bookings = bookings;
         _isLoading = false;
@@ -175,7 +176,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                       children: [
 
                         Text(
-                          booking["vehicle"]?["licensePlate"] ?? "Không có biển số",
+                          booking["licensePlate"] ?? "Không có biển số",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -184,14 +185,14 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
                         const SizedBox(height: 8),
 
-                        Text("Garage: ${booking["garage"]?["name"] ?? ""}"),
+                        Text("Garage: ${booking["garageName"]}"),
 
                         Text(
-                          "Ngày: ${booking["slot"]?["bookingDate"] ?? ""}",
+                          "Ngày: ${booking["bookingDate"]}",
                         ),
 
                         Text(
-                          "Giờ: ${booking["slot"]?["startTime"] ?? ""}",
+                          "Giờ: ${booking["startTime"]}",
                         ),
 
                         Text(
@@ -295,6 +296,28 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               ),
 
                             if (booking["status"] == "IN_PROGRESS")
+                              Row(
+                                children: [
+
+                                  ElevatedButton(
+
+                                    onPressed: () async {
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddPartScreen(
+                                            bookingId: booking["id"],
+                                          ),
+                                        ),
+                                      );
+
+                                    },
+
+                                    child: const Text("Thêm phụ tùng"),
+                                  ),
+
+                                  const SizedBox(width: 8),
                               ElevatedButton(
                                 onPressed: () async {
                                   try {
@@ -320,6 +343,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   }
                                 },
                                 child: const Text("Hoàn thành"),
+                              ),
+                                ],
                               ),
                           ],
                         ),

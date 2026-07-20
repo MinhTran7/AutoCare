@@ -1,4 +1,5 @@
 package com.autocare.api.entity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,6 +16,7 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
@@ -23,10 +25,12 @@ public class Booking {
     @JoinColumn(name = "garage_id", nullable = false)
     private Garage garage;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id", nullable = false)
     private BookingSlot slot;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL)
     private List<BookingItem> bookingItems;
 
@@ -54,6 +58,8 @@ public class Booking {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public enum BookingType { GARAGE, HOME }
-    public enum BookingStatus { PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED }
+    public enum BookingType { GARAGE, HOME, ONLINE }
+    
+    public enum BookingStatus { PENDING, CONFIRMED, IN_PROGRESS, WAITING_PAYMENT, COMPLETED, CANCELLED }
+
 }

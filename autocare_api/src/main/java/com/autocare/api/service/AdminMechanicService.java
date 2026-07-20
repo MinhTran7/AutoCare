@@ -19,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
 public class AdminMechanicService {
@@ -28,6 +30,7 @@ public class AdminMechanicService {
     private final GarageRepository garageRepository;
     private final MechanicRepository mechanicRepository;
 
+    @Transactional
     public MechanicAccountResponse createMechanic(CreateMechanicRequest request) {
         validateCreateMechanicRequest(request);
 
@@ -48,6 +51,9 @@ public class AdminMechanicService {
             );
         }
 
+        // Resolve garage trước khi lưu user — tránh user được tạo rồi mới lỗi id null
+        Garage garage = resolveGarage(request.getGarageId());
+
         User mechanic = User.builder()
                 .fullName(request.getFullName().trim())
                 .email(email)
@@ -61,13 +67,7 @@ public class AdminMechanicService {
                 .build();
 
         User savedMechanic = userRepository.save(mechanic);
-
-        Garage garage = garageRepository.findById(request.getGarageId())
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Garage not found"));
-
+      
         Mechanic mechanicEntity = Mechanic.builder()
                 .user(savedMechanic)
                 .garage(garage)
@@ -148,6 +148,22 @@ public class AdminMechanicService {
         User savedMechanic = userRepository.save(mechanic);
 
         return new MechanicAccountResponse(savedMechanic);
+    }
+
+    private Garage resolveGarage(Integer garageId) {
+        if (garageId == null) {
+            // Form Admin hiện chưa chọn garage — gắn garage ACTIVE đầu tiên nếu có
+            return garageRepository.findByStatusOrderByNameAsc(Garage.GarageStatus.ACTIVE)
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        return garageRepository.findById(garageId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Không tìm thấy garage"
+                ));
     }
 
     private User getMechanicById(Integer id) {

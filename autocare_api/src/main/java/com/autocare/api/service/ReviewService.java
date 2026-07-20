@@ -20,39 +20,39 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final BookingStatusLogService bookingStatusLogService;
 
     public ReviewService(
             ReviewRepository reviewRepository,
             UserRepository userRepository,
-            BookingRepository bookingRepository
+            BookingRepository bookingRepository,
+            BookingStatusLogService bookingStatusLogService
     ) {
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
+        this.bookingStatusLogService = bookingStatusLogService;
     }
 
-    // ── Lấy tất cả review của 1 garage ───────────────────────────────────────
     @Transactional(readOnly = true)
     public List<Review> getGarageReviews(Integer garageId) {
         return reviewRepository
                 .findByGarage_IdAndIsVisibleTrueOrderByCreatedAtDesc(garageId);
     }
 
-    // ── Lấy review của user hiện tại ─────────────────────────────────────────
     public List<Review> getMyReviews() {
         User currentUser = getCurrentUser();
         return reviewRepository
                 .findByUser_IdOrderByCreatedAtDesc(currentUser.getId());
     }
 
-    // ── Lấy review theo bookingId ─────────────────────────────────────────────
     public Review getByBookingId(Integer bookingId) {
         return reviewRepository
                 .findByBooking_Id(bookingId)
                 .orElseThrow(() -> new RuntimeException("Chưa có đánh giá cho booking này"));
     }
 
-    // ── Tạo review mới ────────────────────────────────────────────────────────
+    @Transactional
     public Review createReview(Integer bookingId, Integer garageId,
                                Integer rating, String comment, String images) {
         User currentUser = getCurrentUser();
@@ -60,7 +60,8 @@ public class ReviewService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy booking #" + bookingId));
 
-        if (booking.getStatus() != Booking.BookingStatus.COMPLETED) {
+        String currentStatus = bookingStatusLogService.getCurrentStatus(bookingId);
+        if (!"COMPLETED".equals(currentStatus)) {
             throw new RuntimeException("Chỉ có thể đánh giá sau khi dịch vụ hoàn thành");
         }
 
@@ -85,7 +86,7 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
-    // ── Sửa review ───────────────────────────────────────────────────────────
+    @Transactional
     public Review updateReview(Integer bookingId, Integer rating,
                                String comment, String images) {
         User currentUser = getCurrentUser();
@@ -106,7 +107,6 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
-    // ── Xoá review ───────────────────────────────────────────────────────────
     public void deleteReview(Integer bookingId) {
         User currentUser = getCurrentUser();
 
@@ -121,7 +121,6 @@ public class ReviewService {
         reviewRepository.delete(review);
     }
 
-    // ── Ẩn/hiện review (Admin) ────────────────────────────────────────────────
     public Review toggleVisibility(Integer reviewId) {
         Review review = reviewRepository
                 .findById(reviewId)
@@ -130,14 +129,12 @@ public class ReviewService {
         return reviewRepository.save(review);
     }
 
-    // ── Lọc theo số sao ───────────────────────────────────────────────────────
     public List<Review> getGarageReviewsByRating(Integer garageId, Integer rating) {
         validateRating(rating);
         return reviewRepository
                 .findByGarage_IdAndRatingAndIsVisibleTrue(garageId, rating);
     }
 
-    // ── Validate & Helper ─────────────────────────────────────────────────────
     private void validateRating(Integer rating) {
         if (rating == null || rating < 1 || rating > 5) {
             throw new RuntimeException("Số sao phải từ 1 đến 5");
