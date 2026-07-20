@@ -1,5 +1,6 @@
 package com.autocare.api.service;
 
+import com.autocare.api.dto.mechanic.MechanicBookingResponse;
 import com.autocare.api.entity.*;
 import com.autocare.api.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -58,6 +60,7 @@ public class MechanicService {
         if (mechanic.getStatus() == Mechanic.MechanicStatus.BUSY) {
             throw new RuntimeException("Bạn đang xử lý đơn khác.");
         }
+        String oldStatus = booking.getStatus().name();
 
         booking.setMechanic(mechanic);
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
@@ -68,7 +71,7 @@ public class MechanicService {
         // ── TV3: Ghi log CONFIRMED + gửi thông báo khách ─────────────────────
         try {
             bookingStatusLogService.logStatusChange(
-                    bookingId, null, "CONFIRMED",
+                    bookingId, oldStatus, booking.getStatus().name(),
                     "Thợ " + mechanic.getUser().getFullName() + " đã nhận đơn", null);
         } catch (Exception ignored) {}
 
@@ -90,6 +93,7 @@ public class MechanicService {
         if (!booking.getMechanic().getId().equals(mechanic.getId())) {
             throw new RuntimeException("Không phải đơn của bạn");
         }
+        String oldStatus = booking.getStatus().name();
 
         booking.setMechanic(null);
         booking.setStatus(Booking.BookingStatus.PENDING);
@@ -100,8 +104,8 @@ public class MechanicService {
         // ── TV3: Ghi log quay về PENDING ─────────────────────────────────────
         try {
             bookingStatusLogService.logStatusChange(
-                    bookingId, null, "PENDING",
-                    "Thợ đã trả lại đơn, chờ thợ khác nhận", null);
+                    bookingId, oldStatus, booking.getStatus().name(),
+                    "Thợ đã trả lại đơn, chờ thợ khác nhận", booking.getVehicle().getUser().getId());
         } catch (Exception ignored) {}
 
         return saved;
@@ -126,6 +130,7 @@ public class MechanicService {
         if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
             throw new RuntimeException("Đơn chưa ở trạng thái CONFIRMED");
         }
+        String oldStatus = booking.getStatus().name();
 
         booking.setStatus(Booking.BookingStatus.IN_PROGRESS);
         Booking saved = bookingRepository.save(booking);
@@ -133,8 +138,8 @@ public class MechanicService {
         // ── TV3: Ghi log IN_PROGRESS + gửi thông báo khách ───────────────────
         try {
             bookingStatusLogService.logStatusChange(
-                    bookingId, null, "IN_PROGRESS",
-                    "Thợ đã bắt đầu sửa chữa", null);
+                    bookingId, oldStatus, booking.getStatus().name(),
+                    "Thợ đã bắt đầu sửa chữa", booking.getVehicle().getUser().getId());
         } catch (Exception ignored) {}
 
         return saved;
@@ -169,7 +174,7 @@ public class MechanicService {
                 .orElseThrow(() ->
                         new RuntimeException("Không tìm thấy phụ tùng"));
 
-        if(sparePart.getUnitPrice()==null){
+        if(sparePart.getSellingPrice()==null){
 
             throw new RuntimeException(
                     "Phụ tùng \"" + sparePart.getPartName()
@@ -186,7 +191,7 @@ public class MechanicService {
                         .booking(booking)
                         .sparePart(sparePart)
                         .quantity(quantity)
-                        .price(sparePart.getUnitPrice())
+                        .price(sparePart.getSellingPrice())
                         .build();
 
         bookingSparePartRepository.save(item);
@@ -234,6 +239,7 @@ public class MechanicService {
         invoice.setBooking(booking);
         invoice.setTotalAmount(totalAmount);
         invoice.setStatus("UNPAID");
+        String oldStatus = booking.getStatus().name();
 
         // 5. Chuyển trạng thái đơn
         booking.setStatus(Booking.BookingStatus.WAITING_PAYMENT);
@@ -245,36 +251,61 @@ public class MechanicService {
         // ── TV3: Ghi log COMPLETED + gửi thông báo khách ─────────────────────
         try {
             bookingStatusLogService.logStatusChange(
-                    bookingId, null, "COMPLETED",
-                    "Dịch vụ hoàn thành. Hoá đơn đã được tạo.", null);
+                    bookingId, oldStatus, booking.getStatus().name(),
+                    "Đã sửa xong, chờ khách thanh toán.", booking.getVehicle().getUser().getId());
         } catch (Exception ignored) {}
 
         return savedInvoice;
     }
 
     // ── Các method không thay đổi ─────────────────────────────────────────────
-    public List<Booking> getWaitingBookings(Integer userId) {
+    public List<MechanicBookingResponse> getWaitingBookings(Integer userId) {
         Mechanic mechanic = mechanicRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Mechanic not found"));
-        return bookingRepository.findWaitingBookingsByGarage(mechanic.getGarage().getId());
+        return bookingRepository.findWaitingBookingsByGarage(mechanic.getGarage().getId())
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    public List<Booking> getConfirmedBookings(Integer userId) {
+    public List<MechanicBookingResponse> getDashboardBookings(Integer userId){
+
         Mechanic mechanic = mechanicRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Mechanic not found"));
-        return bookingRepository.findConfirmedBookings(mechanic.getId());
+
+        return bookingRepository.findMechanicDashboard(
+                        mechanic.getGarage().getId(),
+                        mechanic.getId())
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    public List<Booking> getRepairingBookings(Integer userId) {
+    public List<MechanicBookingResponse> getConfirmedBookings(Integer userId) {
         Mechanic mechanic = mechanicRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Mechanic not found"));
-        return bookingRepository.findRepairingBookings(mechanic.getId());
+        return bookingRepository.findConfirmedBookings(mechanic.getId())
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    public List<Booking> getMyBookings(Integer userId) {
+    public List<MechanicBookingResponse> getRepairingBookings(Integer userId) {
         Mechanic mechanic = mechanicRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Mechanic not found"));
-        return bookingRepository.findByMechanic_IdOrderByCreatedAtDesc(mechanic.getId());
+        return bookingRepository.findRepairingBookings(mechanic.getId())
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<MechanicBookingResponse> getMyBookings(Integer userId) {
+        Mechanic mechanic = mechanicRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+        return bookingRepository.findByMechanic_IdOrderByCreatedAtDesc(mechanic.getId())
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
     public void checkIn(Integer userId) {
@@ -317,5 +348,17 @@ public class MechanicService {
         Mechanic mechanic = mechanicRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Mechanic not found"));
         return attendanceRepository.findByMechanicIdOrderByWorkDateDesc(mechanic.getId());
+    }
+
+    private MechanicBookingResponse toDto(Booking b) {
+
+        return MechanicBookingResponse.builder()
+                .id(b.getId())
+                .garageName(b.getGarage().getName())
+                .licensePlate(b.getVehicle().getLicensePlate())
+                .bookingDate(b.getSlot().getBookingDate())
+                .startTime(b.getSlot().getStartTime())
+                .status(b.getStatus().name())
+                .build();
     }
 }

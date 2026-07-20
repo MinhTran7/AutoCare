@@ -196,6 +196,23 @@ public class MechanicController {
         }
     }
 
+    @GetMapping("/bookings/dashboard")
+    public ResponseEntity<?> getDashboardBookings(
+            @RequestAttribute("userId") Integer userId) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    mechanicService.getDashboardBookings(userId));
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+
+        }
+    }
+
     /**
      * 3. API: Chấm công (Check-in) đầu ca
      * Endpoint: POST /api/mechanics/check-in

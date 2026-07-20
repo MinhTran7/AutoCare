@@ -70,6 +70,20 @@ class MechanicApiService {
     throw Exception(response.body);
   }
 
+  Future<List<dynamic>> getDashboardBookings() async {
+
+    final response = await http.get(
+      Uri.parse("${ApiConstants.baseUrl}/api/mechanics/bookings/dashboard"),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception(response.body);
+  }
+
   Future<void> addSparePart(
       int bookingId,
       int sparePartId,

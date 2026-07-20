@@ -64,6 +64,22 @@ public interface BookingRepository extends JpaRepository<Booking, Integer> {
     List<Booking> findRepairingBookings(
             @Param("mechanicId") Integer mechanicId);
 
+    @Query("""
+               SELECT b
+               FROM Booking b
+               WHERE
+                   (
+                     b.garage.id = :garageId
+                     AND b.status='PENDING'
+                   )
+               OR
+                   (
+                     b.mechanic.id=:mechanicId
+                   )
+               ORDER BY b.createdAt DESC
+           """)
+    List<Booking> findMechanicDashboard(Integer garageId, Integer mechanicId);
+
     List<Booking> findByMechanic_IdOrderByCreatedAtDesc(Integer mechanicId);
 
     List<Booking> findByCreatedAtBetween(LocalDateTime from, LocalDateTime to);

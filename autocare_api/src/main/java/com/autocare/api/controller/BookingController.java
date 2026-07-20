@@ -7,6 +7,7 @@ import com.autocare.api.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,5 +43,6 @@ public class BookingController {
         // Gọi hàm lấy danh sách booking của chính người dùng đang đăng nhập dựa vào Token
         return bookingService.getMyBookings();
     }
+
 }
 

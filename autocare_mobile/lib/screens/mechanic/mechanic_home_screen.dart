@@ -25,7 +25,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
     try {
-      final bookings = await _apiService.getMyBookings();
+      final bookings = await _apiService.getDashboardBookings();
       setState(() {
         _bookings = bookings;
         _isLoading = false;
@@ -176,7 +176,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                       children: [
 
                         Text(
-                          booking["vehicle"]?["licensePlate"] ?? "Không có biển số",
+                          booking["licensePlate"] ?? "Không có biển số",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
@@ -185,14 +185,14 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
                         const SizedBox(height: 8),
 
-                        Text("Garage: ${booking["garage"]?["name"] ?? ""}"),
+                        Text("Garage: ${booking["garageName"]}"),
 
                         Text(
-                          "Ngày: ${booking["slot"]?["bookingDate"] ?? ""}",
+                          "Ngày: ${booking["bookingDate"]}",
                         ),
 
                         Text(
-                          "Giờ: ${booking["slot"]?["startTime"] ?? ""}",
+                          "Giờ: ${booking["startTime"]}",
                         ),
 
                         Text(

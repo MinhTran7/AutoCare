@@ -79,10 +79,12 @@ public class Invoice {
         if (subtotal  == null) subtotal  = BigDecimal.ZERO;
         if (discount  == null) discount  = BigDecimal.ZERO;
         if (taxAmount == null) taxAmount = BigDecimal.ZERO;
-        if (invoiceCode == null || invoiceCode.isBlank()) {
-            String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            invoiceCode = "INV-" + date + "-TEMP";
-        }
+//        if (invoiceCode == null || invoiceCode.isBlank()) {
+//            String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+//            invoiceCode = "INV-" + date + "-TEMP";
+//        }
+        // Không sinh invoiceCode tại đây.
+        // InvoiceService sẽ tạo sau khi save.
     }
 
     @PreUpdate
