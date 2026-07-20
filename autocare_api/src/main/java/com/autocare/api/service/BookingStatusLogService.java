@@ -108,6 +108,10 @@ public class BookingStatusLogService {
                 "IN_PROGRESS", new String[]{"status_update",
                         "Xe đang được sửa chữa 🔧",
                         "Thợ đã bắt đầu thực hiện dịch vụ cho xe của bạn."},
+                "WAITING_PAYMENT", new String[]{
+                        "invoice_ready",
+                        "Xe đã sửa xong",
+                        "Xe của bạn đã được sửa xong. Vui lòng tiến hành thanh toán."},
                 "COMPLETED",   new String[]{"invoice_ready",
                         "Dịch vụ hoàn thành 🎉",
                         "Xe của bạn đã sửa xong. Hoá đơn sẵn sàng để thanh toán."},
@@ -131,7 +135,8 @@ public class BookingStatusLogService {
         boolean valid = switch (oldStatus) {
             case "PENDING"     -> newStatus.equals("CONFIRMED")   || newStatus.equals("CANCELLED");
             case "CONFIRMED"   -> newStatus.equals("IN_PROGRESS") || newStatus.equals("CANCELLED");
-            case "IN_PROGRESS" -> newStatus.equals("COMPLETED");
+            case "IN_PROGRESS" -> newStatus.equals("WAITING_PAYMENT");
+            case "WAITING_PAYMENT" -> newStatus.equals("COMPLETED");
             default            -> false;
         };
 
