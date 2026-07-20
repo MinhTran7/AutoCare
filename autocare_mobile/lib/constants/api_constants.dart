@@ -11,23 +11,23 @@ class ApiConstants {
 
     // Chạy bằng Chrome Web
     if (kIsWeb) {
-      return "http://localhost:8080";
+      return "https://autocare-api-5a1r.onrender.com";
     }
 
     // Chạy bằng Android Emulator
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://10.0.2.2:8080";
+      return "https://autocare-api-5a1r.onrender.com";
     }
 
     // Chạy Windows / macOS / Linux desktop
     if (defaultTargetPlatform == TargetPlatform.windows ||
         defaultTargetPlatform == TargetPlatform.macOS ||
         defaultTargetPlatform == TargetPlatform.linux) {
-      return "http://localhost:8080";
+      return "https://autocare-api-5a1r.onrender.com";
     }
 
     // Mặc định
-    return "http://localhost:8080";
+    return "https://autocare-api-5a1r.onrender.com";
   }
 
   static String get loginEndpoint => "$baseUrl/api/auth/login";

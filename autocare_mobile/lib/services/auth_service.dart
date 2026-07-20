@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 
 class AuthService {
   // Chạy Flutter Web Chrome thì dùng localhost
-  static const String baseUrl = 'http://localhost:8080/api/auth';
+  static const String baseUrl =
+      'https://autocare-api-5a1r.onrender.com/api/auth';
 
   // Nếu chạy Android Emulator thì đổi thành:
   // static const String baseUrl = 'http://10.0.2.2:8080/api/auth';

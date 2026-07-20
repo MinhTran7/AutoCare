@@ -4,7 +4,8 @@ import 'package:http/http.dart' as http;
 import '../storage/token_storage.dart';
 
 class ProfileService {
-  final String baseUrl = 'http://localhost:8080/api/users';
+  final String baseUrl =
+      'https://autocare-api-5a1r.onrender.com/api/users';
 
   Future<Map<String, dynamic>> getMe() async {
     final token = await TokenStorage.getToken();

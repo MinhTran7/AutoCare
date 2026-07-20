@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import '../../storage/token_storage.dart';
 
 class ReviewService {
-  final String baseUrl = 'http://localhost:8080/api';
+  final String baseUrl =
+      'https://autocare-api-5a1r.onrender.com/api/';
 
   Future<List<Map<String, dynamic>>> getAllServices() async {
     final token = await TokenStorage.getToken();

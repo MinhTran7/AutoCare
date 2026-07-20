@@ -73,7 +73,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (token == null) throw Exception('Chưa đăng nhập');
 
     final response = await http.get(
-      Uri.parse('http://localhost:8080/api/bookings/my-bookings'),
+      Uri.parse(
+        'https://autocare-api-5a1r.onrender.com/api/bookings/my-bookings',
+      ),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
